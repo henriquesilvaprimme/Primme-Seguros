@@ -4,9 +4,19 @@ const Dashboard = ({ leads, usuarioLogado }) => {
   const [leadsClosed, setLeadsClosed] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
-  const [filtroAplicado, setFiltroAplicado] = useState({ inicio: '', fim: '' });
+  // Inicializar dataInicio e dataFim com valores padrão ao carregar o componente
+  const getPrimeiroDiaMes = () => {
+    const hoje = new Date();
+    return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+  };
+
+  const getDataHoje = () => {
+    return new Date().toISOString().slice(0, 10);
+  };
+
+  const [dataInicio, setDataInicio] = useState(getPrimeiroDiaMes());
+  const [dataFim, setDataFim] = useState(getDataHoje());
+  const [filtroAplicado, setFiltroAplicado] = useState({ inicio: getPrimeiroDiaMes(), fim: getDataHoje() });
 
   // Busca leads fechados
   const buscarLeads = async () => {
