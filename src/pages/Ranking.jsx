@@ -1,38 +1,44 @@
-
 import React, { useEffect, useState } from 'react';
 
-const Ranking = ({ usuarios, leads}) => {
-
+const Ranking = ({ usuarios }) => {
   const [carregando, setCarregando] = useState(true);
-  const [usuariosData, setUsuarios] = useState([]);  // ← nomeei como usuariosData pra não confundir com prop
   const [dadosLeads, setLeads] = useState([]);
 
-  // Estados para filtro por data
+  // Estado para filtro por mês/ano (formato yyyy-mm)
   const [dataInput, setDataInput] = useState(() => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = String(hoje.getMonth() + 1).padStart(2, '0');
     return `${ano}-${mes}`;
   });
-  
-  const [filtroData, setFiltroData] = useState(() => {
-  const hoje = new Date();
-  const ano = hoje.getFullYear();
-  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-  return `${ano}-${mes}`;
-});
+
+  const [filtroData, setFiltroData] = useState(dataInput);
+
+  // Função para converter data no formato dd/mm/aaaa para yyyy-mm-dd
+  const converterDataParaISO = (dataStr) => {
+    if (!dataStr) return '';
+    if (dataStr.includes('/')) {
+      const partes = dataStr.split('/');
+      if (partes.length === 3) {
+        // dd/mm/aaaa -> yyyy-mm-dd
+        return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+      }
+    }
+    // Se já estiver em formato ISO ou outro, tentar retornar só o prefixo yyyy-mm
+    return dataStr.slice(0, 7);
+  };
 
   const buscarClientesFechados = async () => {
+    setCarregando(true);
     try {
-
       const respostaLeads = await fetch(
         'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados'
       );
-      const dadosLeads = await respostaLeads.json();
-
-      setLeads(dadosLeads);
+      const dados = await respostaLeads.json();
+      setLeads(dados);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
+      setLeads([]);
     } finally {
       setCarregando(false);
     }
@@ -42,8 +48,6 @@ const Ranking = ({ usuarios, leads}) => {
     buscarClientesFechados();
   }, []);
 
-  // Debug
-  // Verificações de segurança
   if (!Array.isArray(usuarios) || !Array.isArray(dadosLeads)) {
     return <div style={{ padding: 20 }}>Erro: dados não carregados corretamente.</div>;
   }
@@ -52,7 +56,7 @@ const Ranking = ({ usuarios, leads}) => {
     (u) =>
       u.status === 'Ativo' &&
       u.email !== 'admin@admin.com' &&
-      u.tipo !== 'Admin' // <- EXCLUSÃO DE USUÁRIOS ADMINISTRADORES
+      u.tipo !== 'Admin'
   );
 
   const formatarMoeda = (valor) =>
@@ -78,19 +82,15 @@ const Ranking = ({ usuarios, leads}) => {
   };
 
   const usuariosComContagem = ativos.map((usuario) => {
-    const leadsUsuario = dadosLeads.filter(
-      (l) => {
-          const responsavelOk = l.Responsavel === usuario.nome;
-          const statusOk = l.Status === 'Fechado';
-          const seguradoraOk = l.Seguradora != "";
-          const dataOk = !filtroData || (new Date(l.Data).toLocaleDateString('sv-SE').startsWith(filtroData));
-          //console.log("dataOk", dataOk)
-          //console.log("filtroData", filtroData)
-          return responsavelOk && statusOk && seguradoraOk && dataOk;
-      }
-    );
-
-    //console.log(leadsUsuario)
+    // Filtrar leads fechados do usuário com status "Fechado", seguradora preenchida e data dentro do filtro (yyyy-mm)
+    const leadsUsuario = dadosLeads.filter((l) => {
+      const responsavelOk = l.Responsavel === usuario.nome;
+      const statusOk = l.Status === 'Fechado';
+      const seguradoraOk = l.Seguradora && l.Seguradora.trim() !== '';
+      const dataISO = converterDataParaISO(l.Data);
+      const dataOk = !filtroData || dataISO.startsWith(filtroData);
+      return responsavelOk && statusOk && seguradoraOk && dataOk;
+    });
 
     const getCount = (seguradora) =>
       leadsUsuario.filter((l) => l.Seguradora === seguradora).length;
@@ -157,73 +157,72 @@ const Ranking = ({ usuarios, leads}) => {
 
   const aplicarFiltroData = () => {
     setFiltroData(dataInput);
-    //setFiltroNome('');
-    //setNomeInput('');
-    //setPaginaAtual(1);
   };
-  
 
   return (
     <div style={{ padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ margin: 0 }}>Ranking de Usuários</h1>
+        <h1 style={{ margin: 0 }}>Ranking de Usuários</h1>
 
-            <button title='Clique para atualizar os dados'
-              onClick={() => {
-                buscarClientesFechados();
-                //fetchLeadsFechadosFromSheet();
-                //fetchUsuariosFromSheet();
-              }}
-            >
-              🔄
-            </button>
-        </div>
-
-      {/* Filtro data: canto direito */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            minWidth: '230px',
-            justifyContent: 'flex-end',
+        <button
+          title="Clique para atualizar os dados"
+          onClick={() => {
+            buscarClientesFechados();
           }}
         >
-          <button
-            onClick={aplicarFiltroData}
-            style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 14px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              marginRight: '8px',
-            }}
-          >
-            Filtrar
-          </button>
-          <input
-            type="month"
-            value={dataInput}
-            onChange={(e) => setDataInput(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '6px',
-              border: '1px solid #ccc',
-              cursor: 'pointer',
-              minWidth: '140px',
-            }}
-            title="Filtrar leads pela data exata de criação"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') aplicarFiltroData();
-            }}
-          />
-        </div>
+          🔄
+        </button>
+      </div>
 
-      {rankingOrdenado.length === 0 ? (
-        <p>Nenhum usuário ativo no momento.</p>
+      {/* Filtro data: canto direito */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          minWidth: '230px',
+          justifyContent: 'flex-end',
+          marginTop: '8px',
+          marginBottom: '24px',
+        }}
+      >
+        <button
+          onClick={aplicarFiltroData}
+          style={{
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '6px 14px',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            marginRight: '8px',
+          }}
+        >
+          Filtrar
+        </button>
+        <input
+          type="month"
+          value={dataInput}
+          onChange={(e) => setDataInput(e.target.value)}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: '1px solid #ccc',
+            cursor: 'pointer',
+            minWidth: '140px',
+          }}
+          title="Filtrar leads pela data (mês/ano)"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') aplicarFiltroData();
+          }}
+        />
+      </div>
+
+      {carregando ? (
+        <p>Carregando dados...</p>
+      ) : rankingOrdenado.length === 0 ? (
+        <p>Nenhum usuário ativo com leads fechados para o período selecionado.</p>
       ) : (
         <div
           style={{
@@ -291,7 +290,7 @@ const Ranking = ({ usuarios, leads}) => {
                       flexShrink: 0,
                     }}
                   >
-                    {usuario.nome?.charAt(0)?.toUpperCase() || "?"}
+                    {usuario.nome?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <div
                     style={{
