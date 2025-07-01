@@ -7,7 +7,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
   const [selecionados, setSelecionados] = useState({}); // { [leadId]: userId }
   const [paginaAtual, setPaginaAtual] = useState(1);
 
-  // Estados para filtro por data
+  // Estados para filtro por data (mes e ano) - INICIAM LIMPOS
   const [dataInput, setDataInput] = useState('');
   const [filtroData, setFiltroData] = useState('');
 
@@ -44,7 +44,6 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
       .trim();
   };
 
-
   const aplicarFiltroData = () => {
     setFiltroData(dataInput);
     setFiltroNome('');
@@ -60,16 +59,14 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
     setPaginaAtual(1);
   };
 
-  const isSameDate = (leadDateStr, filtroStr) => {
-  if (!filtroStr) return true;
-
-  if (!leadDateStr) return false;
-
-  const leadDate = new Date(leadDateStr)
-    .toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // '2025-06-09'
-  
-  return leadDate === filtroStr;
-};
+  const isSameMonthAndYear = (leadDateStr, filtroMesAno) => {
+    if (!filtroMesAno) return true;
+    if (!leadDateStr) return false;
+    const leadData = new Date(leadDateStr);
+    const leadAno = leadData.getFullYear();
+    const leadMes = String(leadData.getMonth() + 1).padStart(2, '0');
+    return filtroMesAno === `${leadAno}-${leadMes}`;
+  };
 
   const nomeContemFiltro = (leadNome, filtroNome) => {
     if (!filtroNome) return true;
@@ -86,11 +83,10 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
     if (lead.status === 'Fechado' || lead.status === 'Perdido') return false;
 
     if (filtroData) {
-      return isSameDate(lead.createdAt, filtroData);
+      return isSameMonthAndYear(lead.createdAt, filtroData);
     }
 
     if (filtroNome) {
-      // Usando lead.name aqui
       return nomeContemFiltro(lead.name, filtroNome);
     }
 
@@ -110,15 +106,6 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
     }));
   };
 
-  /*const handleEnviar = (leadId) => {
-    const userId = selecionados[leadId];
-    if (!userId) {
-      alert('Selecione um usuário antes de enviar.');
-      return;
-    }
-    transferirLead(leadId, userId);
-  };*/
-
   const handleEnviar = (leadId) => {
     const userId = selecionados[leadId];
     if (!userId) {
@@ -126,35 +113,28 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
       return;
     }
 
-    // Faz a transferência local
     transferirLead(leadId, userId);
   
     const lead = leads.find((l) => l.id === leadId);
     const leadAtualizado = { ...lead, usuarioId: userId };
   
-    // Chama a função de envio
     enviarLeadAtualizado(leadAtualizado);
-  
-
   };
 
   const enviarLeadAtualizado = async (lead) => {
-
-  try {
-    const response = await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_atribuido', {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify(lead),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    //const result = await response.json();
-    //console.log(result);
-  } catch (error) {
-    console.error('Erro ao enviar lead:', error);
-  }
-};
+    try {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_atribuido', {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(lead),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao enviar lead:', error);
+    }
+  };
 
   const handleAlterar = (leadId) => {
     setSelecionados((prev) => ({
@@ -195,7 +175,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h1 style={{ margin: 0 }}>Leads</h1>
 
             <button title='Clique para atualizar os dados'
@@ -274,7 +254,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
             Filtrar
           </button>
           <input
-            type="date"
+            type="month"
             value={dataInput}
             onChange={(e) => setDataInput(e.target.value)}
             style={{
@@ -283,7 +263,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
               border: '1px solid #ccc',
               cursor: 'pointer',
             }}
-            title="Filtrar leads pela data exata de criação"
+            title="Filtrar leads pelo mês e ano de criação"
           />
         </div>
       </div>
@@ -377,18 +357,18 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
 
                 {/* Data no canto inferior direito */}
                 <div
-  style={{
-    position: 'absolute',
-    bottom: '10px',
-    right: '15px',
-    fontSize: '12px',
-    color: '#888',
-    fontStyle: 'italic',  // <- itálico aqui
-  }}
-  title={`Criado em: ${formatarData(lead.createdAt)}`}
->
-  {formatarData(lead.createdAt)}
-</div>
+                  style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    right: '15px',
+                    fontSize: '12px',
+                    color: '#888',
+                    fontStyle: 'italic',
+                  }}
+                  title={`Criado em: ${formatarData(lead.createdAt)}`}
+                >
+                  {formatarData(lead.createdAt)}
+                </div>
               </div>
             );
           })}
