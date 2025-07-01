@@ -5,6 +5,13 @@ const LeadsFechados = ({ leads, usuarios, onUpdateInsurer, onConfirmInsurer, onU
 
   console.log("usuarioLogado", isAdmin)
 
+  // Obtém o mês e ano atual no formato 'YYYY-MM'
+  const getMesAnoAtual = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    return `${ano}-${mes}`;
+  };
 
   const [valores, setValores] = useState(() => {
     const inicial = {};
@@ -21,30 +28,30 @@ const LeadsFechados = ({ leads, usuarios, onUpdateInsurer, onConfirmInsurer, onU
   });
 
   useEffect(() => {
-  setValores(prevValores => {
-    const novosValores = { ...prevValores };
+    setValores(prevValores => {
+      const novosValores = { ...prevValores };
 
-    leads
-      .filter(lead => lead.Status === 'Fechado')
-      .forEach(lead => {
-        if (!novosValores[lead.ID]) {
-          novosValores[lead.ID] = {
-            PremioLiquido: lead.PremioLiquido !== undefined ? Math.round(parseFloat(lead.PremioLiquido) * 100) : 0,
-            Comissao: lead.Comissao ? String(lead.Comissao) : '',
-            Parcelamento: lead.Parcelamento || '',
-            insurer: lead.Seguradora || '',
-          };
-        }
-      });
+      leads
+        .filter(lead => lead.Status === 'Fechado')
+        .forEach(lead => {
+          if (!novosValores[lead.ID]) {
+            novosValores[lead.ID] = {
+              PremioLiquido: lead.PremioLiquido !== undefined ? Math.round(parseFloat(lead.PremioLiquido) * 100) : 0,
+              Comissao: lead.Comissao ? String(lead.Comissao) : '',
+              Parcelamento: lead.Parcelamento || '',
+              insurer: lead.Seguradora || '',
+            };
+          }
+        });
 
-    return novosValores;
-  });
-}, [leads]);
+      return novosValores;
+    });
+  }, [leads]);
 
   const [nomeInput, setNomeInput] = useState('');
-  const [dataInput, setDataInput] = useState('');
+  const [dataInput, setDataInput] = useState(getMesAnoAtual());
   const [filtroNome, setFiltroNome] = useState('');
-  const [filtroData, setFiltroData] = useState('');
+  const [filtroData, setFiltroData] = useState(getMesAnoAtual());
 
   const normalizarTexto = (texto) =>
     texto
@@ -269,7 +276,7 @@ const LeadsFechados = ({ leads, usuarios, onUpdateInsurer, onConfirmInsurer, onU
             Filtrar
           </button>
           <input
-            type="date"
+            type="month"
             value={dataInput}
             onChange={(e) => setDataInput(e.target.value)}
             style={{
@@ -280,7 +287,7 @@ const LeadsFechados = ({ leads, usuarios, onUpdateInsurer, onConfirmInsurer, onU
               height: '36px',
               fontSize: '14px',
             }}
-            title="Filtrar leads pela data exata de criação"
+            title="Filtrar leads pelo mês e ano de criação"
           />
         </div>
       </div>
