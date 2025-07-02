@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+} from '/components/ui/dialog';
+import { Input } from '/components/ui/input';
+import { Label } from '/components/ui/label';
+import { Button } from '/components/ui/button';
 
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
