@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Users, Search, Trophy, UserPlus, UserCircle } from 'lucide-react';
+import { Home, Users, Search, Trophy, UserPlus, UserCircle, PlusCircle } from 'lucide-react';
 
 const Sidebar = ({ nomeUsuario }) => {
 
@@ -36,6 +36,20 @@ const Sidebar = ({ nomeUsuario }) => {
           <Users size={20} />
           Leads
         </NavLink>
+
+        {isAdmin && (
+          <NavLink
+            to="/criar-lead"
+            className={({ isActive }) =>
+              `flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-100 transition ${
+                isActive ? 'border-l-4 border-blue-500 bg-blue-50' : ''
+              }`
+            }
+          >
+            <PlusCircle size={20} />
+            Criar Lead
+          </NavLink>
+        )}
 
         <NavLink
           to="/leads-fechados"
