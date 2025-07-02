@@ -536,6 +536,8 @@ const App = () => {
               />
             </>
           )}
+          <Route path="/criar-lead" element={<CriarLead />} />
+          )}
           <Route
             path="/ranking"
             element={
