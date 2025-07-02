@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Button } from '../components/ui/button';
 
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
@@ -53,8 +53,6 @@ export default function CriarLead() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        // Se seu Apps Script exigir, deixe 'no-cors':
-        // mode: 'no-cors',
       });
       alert('Lead criado com sucesso!');
       setForm(init);
