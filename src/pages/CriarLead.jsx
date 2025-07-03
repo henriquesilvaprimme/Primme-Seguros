@@ -8,44 +8,47 @@ const CriarLead = () => {
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
-  
   const navigate = useNavigate();
 
-  const handleCriar = () => {
-    // Validação simples
+  // Gera um ID simples único baseado em timestamp
+  const gerarId = () => Date.now();
+
+  const handleCriar = async () => {
     if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType) {
       alert('Por favor, preencha todos os campos.');
       return;
     }
 
     const novoLead = {
-      ID: Date.now(),  // id único
+      id: gerarId(),
       name,
       vehicleModel,
       vehicleYearModel,
       city,
       phone,
       insuranceType,
-      data: new Date().toISOString(), // data atual em ISO string
+      data: new Date().toISOString(),
+      origem: 'Leads' // opcional, mas bom deixar explicito a aba
     };
 
-    criarLeadFunc(novoLead);
-
-    // Você pode fazer alguma atualização de estado se quiser,
-    // ou navegar direto para a lista de leads, por exemplo:
-    navigate('/leads');
-  };
-
-  const criarLeadFunc = async (lead) => {
     try {
-      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead', {
+      await fetch('https://script.google.com/macros/s/SEU_ID_DO_SCRIPT/exec', {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(lead),
+        mode: 'no-cors', // Apps Script não aceita CORS normal
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'salvarLead',
+          lead: novoLead,
+        }),
       });
+
+      alert('Lead criado com sucesso!');
+      navigate('/leads'); // redireciona para a lista de leads
     } catch (error) {
-      console.error('Erro ao enviar lead:', error);
+      console.error('Erro ao criar lead:', error);
+      alert('Erro ao criar lead. Tente novamente.');
     }
   };
 
@@ -58,7 +61,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -68,7 +71,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={vehicleModel}
-          onChange={e => setVehicleModel(e.target.value)}
+          onChange={(e) => setVehicleModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -78,7 +81,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={vehicleYearModel}
-          onChange={e => setVehicleYearModel(e.target.value)}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -88,7 +91,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={city}
-          onChange={e => setCity(e.target.value)}
+          onChange={(e) => setCity(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -96,9 +99,9 @@ const CriarLead = () => {
       <div>
         <label className="block text-gray-700">Telefone</label>
         <input
-          type="text"
+          type="tel"
           value={phone}
-          onChange={e => setPhone(e.target.value)}
+          onChange={(e) => setPhone(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -108,7 +111,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={insuranceType}
-          onChange={e => setInsuranceType(e.target.value)}
+          onChange={(e) => setInsuranceType(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
