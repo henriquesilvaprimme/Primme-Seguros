@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const CriarLead = () => {
+const CriarLead = ({ adicionarLead }) => {
   const [name, setName] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYearModel, setVehicleYearModel] = useState('');
@@ -11,14 +11,14 @@ const CriarLead = () => {
 
   const navigate = useNavigate();
 
-  const handleCriarLead = () => {
+  const handleCriar = () => {
     if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType) {
-      alert('Por favor, preencha todos os campos');
+      alert('Por favor, preencha todos os campos.');
       return;
     }
 
     const novoLead = {
-      ID: Date.now(), // id único numérico
+      id: Date.now(), // id numérico único
       name,
       vehicleModel,
       vehicleYearModel,
@@ -28,65 +28,104 @@ const CriarLead = () => {
       data: new Date().toISOString(),
     };
 
-    fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead', {
-      method: 'POST',
-      mode: 'no-cors', 
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(novoLead),
-    })
-      .then(() => {
-        alert('Lead criado com sucesso!');
-        navigate('/leads'); // ajusta para a rota que lista leads no seu app
-      })
-      .catch((err) => {
-        alert('Erro ao criar lead: ' + err.message);
-      });
+    criarLeadFunc(novoLead);
+
+    adicionarLead && adicionarLead(novoLead);
+
+    navigate('/leads'); // ajusta para sua rota que lista os leads
+  };
+
+  const criarLeadFunc = async (lead) => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lead),
+        }
+      );
+      // Se quiser checar resposta: 
+      // const result = await response.json();
+      // console.log(result);
+    } catch (error) {
+      console.error('Erro ao criar lead:', error);
+    }
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-4">
-      <h2 className="text-3xl font-bold mb-6">Criar Novo Lead</h2>
+    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
+      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
 
-      <input
-        placeholder="Nome"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="input"
-      />
-      <input
-        placeholder="Modelo do Veículo"
-        value={vehicleModel}
-        onChange={(e) => setVehicleModel(e.target.value)}
-        className="input"
-      />
-      <input
-        placeholder="Ano do Modelo"
-        value={vehicleYearModel}
-        onChange={(e) => setVehicleYearModel(e.target.value)}
-        className="input"
-      />
-      <input
-        placeholder="Cidade"
-        value={city}
-        onChange={(e) => setCity(e.target.value)}
-        className="input"
-      />
-      <input
-        placeholder="Telefone"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="input"
-      />
-      <input
-        placeholder="Tipo de Seguro"
-        value={insuranceType}
-        onChange={(e) => setInsuranceType(e.target.value)}
-        className="input"
-      />
+      <div>
+        <label className="block text-gray-700">Nome</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
 
-      <button onClick={handleCriarLead} className="btn">
-        Criar Lead
-      </button>
+      <div>
+        <label className="block text-gray-700">Modelo do Veículo</label>
+        <input
+          type="text"
+          value={vehicleModel}
+          onChange={(e) => setVehicleModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Ano do Modelo</label>
+        <input
+          type="text"
+          value={vehicleYearModel}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Cidade</label>
+        <input
+          type="text"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Telefone</label>
+        <input
+          type="text"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Tipo de Seguro</label>
+        <input
+          type="text"
+          value={insuranceType}
+          onChange={(e) => setInsuranceType(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleCriar}
+          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
+        >
+          Criar Lead
+        </button>
+      </div>
     </div>
   );
 };
