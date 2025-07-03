@@ -28,7 +28,7 @@ const CriarLead = ({ adicionarLead }) => {
 
     // Cria o objeto lead conforme o esperado pela planilha
     const novoLead = {
-      ID: Date.now(),
+      id: Date.now(),
       name,
       vehicleModel,
       vehicleYearModel,
