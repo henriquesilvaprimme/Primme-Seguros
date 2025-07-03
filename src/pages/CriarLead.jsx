@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 
-const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+// URL do seu Apps Script
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
+// Função para gerar ID aleatório
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 const CriarLead = ({ fetchLeadsFromSheet }) => {
@@ -14,7 +15,6 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     phone: '',
     insuranceType: '',
   });
-
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState(null);
 
@@ -47,7 +47,10 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(lead), // <-- importante: envia diretamente o objeto lead
+        body: JSON.stringify({
+          action: 'salvarLead',
+          lead: lead,
+        }),
       });
 
       setMensagem('Lead criado com sucesso!');
@@ -60,7 +63,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         insuranceType: '',
       });
 
-      fetchLeadsFromSheet?.(); // atualiza lista, se for passado via prop
+      fetchLeadsFromSheet?.();
     } catch (err) {
       setMensagem('Erro ao salvar lead.');
     } finally {
@@ -129,7 +132,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
             loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
           }`}
         >
-          {loading ? 'Salvando...' : 'Criar Lead'}
+          {loading ? 'Salvando…' : 'Criar Lead'}
         </button>
       </form>
 
