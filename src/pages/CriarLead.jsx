@@ -34,7 +34,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       phone: form.phone,
       insurancetype: form.insurancetype,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsável: '',
+      responsavel: '',
       status: '',
       editado: '',
       origem: 'Leads',
