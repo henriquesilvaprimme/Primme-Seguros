@@ -1,140 +1,131 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
-
-const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1000000)}`;
-
-export default function CriarLead({ fetchLeadsFromSheet }) {
-  const [form, setForm] = useState({
-    name: '',
-    vehicleModel: '',
-    vehicleYearModel: '',
-    city: '',
-    phone: '',
-    insuranceType: '',
+export default function CriarLead() {
+  const [lead, setLead] = useState({
+    id: "", // Gere ou preencha esse campo
+    name: "",
+    vehiclemodel: "",
+    vehicleyearmodel: "",
+    city: "",
+    phone: "",
+    insurancetype: "",
+    data: "",
+    origem: "Leads",
+    status: "",
+    responsavel: "",
+    editado: ""
   });
-  const [loading, setLoading] = useState(false);
-  const [mensagem, setMensagem] = useState('');
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const [message, setMessage] = useState("");
 
-  const handleSubmit = async (e) => {
+  // Função para gerar um ID simples, se desejar
+  function gerarId() {
+    return Date.now().toString();
+  }
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setLead((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
-    setMensagem('');
 
-    // Monta o objeto lead com campo origem fixo para salvar na aba "Leads"
-    const novoLead = {
-      id: gerarId(),
-      name: form.name,
-      vehiclemodel: form.vehicleModel,
-      vehicleyearmodel: form.vehicleYearModel,
-      city: form.city,
-      phone: form.phone,
-      insurancetype: form.insuranceType,
-      data: new Date().toLocaleDateString('pt-BR'),
-      origem: 'Leads',  // <<< ESSENCIAL para salvar na aba correta
-      status: '',
-      responsavel: '',
-      editado: '',
+    // Gera ID se não tiver
+    if (!lead.id) {
+      lead.id = gerarId();
+      setLead({ ...lead, id: lead.id });
+    }
+
+    // Monta o corpo igual Usuario.jsx, mas para salvarLead
+    const body = {
+      action: "salvarLead",
+      lead: lead
     };
 
     try {
-      await fetch(`${SCRIPT_URL}?v=salvar_lead`, {
-        method: 'POST',
-        mode: 'no-cors', // remove o problema CORS, mas não permite ler resposta
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ lead: novoLead }),
-      });
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec",
+        {
+          method: "POST",
+          body: JSON.stringify(body)
+          // NÃO coloque headers Content-Type aqui para evitar preflight CORS
+        }
+      );
 
-      setMensagem('✅ Lead criado com sucesso!');
-      setForm({
-        name: '',
-        vehicleModel: '',
-        vehicleYearModel: '',
-        city: '',
-        phone: '',
-        insuranceType: '',
-      });
+      if (!response.ok) {
+        throw new Error("Erro ao salvar lead: " + response.statusText);
+      }
 
-      fetchLeadsFromSheet?.();
+      const text = await response.text();
+
+      if (text.includes("adicionado") || text.includes("ok")) {
+        setMessage("Lead salvo com sucesso!");
+      } else {
+        setMessage("Resposta inesperada: " + text);
+      }
     } catch (error) {
-      setMensagem('❌ Erro ao salvar o lead.');
-    } finally {
-      setLoading(false);
+      setMessage("Erro ao salvar lead: " + error.message);
     }
-  };
+  }
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-blue-700">Criar Lead</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div>
+      <h2>Criar Lead</h2>
+      <form onSubmit={handleSubmit}>
         <input
-          required
           name="name"
           placeholder="Nome"
-          value={form.name}
+          value={lead.name}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
+          required
         />
         <input
-          required
-          name="vehicleModel"
+          name="vehiclemodel"
           placeholder="Modelo do veículo"
-          value={form.vehicleModel}
+          value={lead.vehiclemodel}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
         />
         <input
-          required
-          name="vehicleYearModel"
-          placeholder="Ano/Modelo"
-          value={form.vehicleYearModel}
+          name="vehicleyearmodel"
+          placeholder="Ano do veículo"
+          value={lead.vehicleyearmodel}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
         />
         <input
-          required
           name="city"
           placeholder="Cidade"
-          value={form.city}
+          value={lead.city}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
         />
         <input
-          required
           name="phone"
           placeholder="Telefone"
-          value={form.phone}
+          value={lead.phone}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
         />
         <input
-          required
-          name="insuranceType"
-          placeholder="Tipo de seguro (Auto, Moto, etc.)"
-          value={form.insuranceType}
+          name="insurancetype"
+          placeholder="Tipo de seguro"
+          value={lead.insurancetype}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full bg-blue-600 text-white py-2 rounded ${
-            loading ? 'opacity-50' : 'hover:bg-blue-700'
-          }`}
-        >
-          {loading ? 'Salvando...' : 'Criar Lead'}
-        </button>
+        <input
+          name="data"
+          placeholder="Data"
+          type="date"
+          value={lead.data}
+          onChange={handleChange}
+        />
+        {/* Outros campos se quiser */}
+
+        <button type="submit">Salvar Lead</button>
       </form>
-      {mensagem && (
-        <p className="mt-4 text-center text-sm text-indigo-700">{mensagem}</p>
-      )}
+
+      {message && <p>{message}</p>}
     </div>
   );
 }
