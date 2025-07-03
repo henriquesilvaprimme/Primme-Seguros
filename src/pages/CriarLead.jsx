@@ -25,13 +25,13 @@ const CriarLead = ({ adicionarLead }) => {
     }
 
     const novoLead = {
-      id: Date.now(),
-      nome,
-      modeloVeiculo,
-      anoModeloVeiculo,
-      cidade,
-      telefone,
-      tipoSeguro,
+      ID: Date.now(),
+      name: nome,
+      vehicleModel: modeloVeiculo,
+      vehicleYearModel: anoModeloVeiculo,
+      city: cidade,
+      phone: telefone,
+      insuranceType: tipoSeguro,
       data: new Date().toISOString().split('T')[0],
     };
 
@@ -44,7 +44,7 @@ const CriarLead = ({ adicionarLead }) => {
 
   const criarLeadFunc = async (lead) => {
     try {
-      const response = await fetch(
+      await fetch(
         'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
         {
           method: 'POST',
@@ -55,7 +55,6 @@ const CriarLead = ({ adicionarLead }) => {
           },
         }
       );
-      // Não há resposta legível com no-cors
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
     }
