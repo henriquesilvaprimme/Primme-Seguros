@@ -32,7 +32,7 @@ const CriarLead = () => {
     };
 
     try {
-      await fetch('https://script.google.com/macros/s/SEU_ID_DO_SCRIPT/exec', {
+      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_usuario', {
         method: 'POST',
         mode: 'no-cors', // Apps Script não aceita CORS normal
         headers: {
