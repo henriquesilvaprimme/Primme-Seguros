@@ -2,46 +2,53 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const CriarLead = ({ adicionarLead }) => {
-  const [nome, setNome] = useState('');
-  const [modeloVeiculo, setModeloVeiculo] = useState('');
-  const [anoModeloVeiculo, setAnoModeloVeiculo] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [tipoSeguro, setTipoSeguro] = useState('');
+  // Estados para os campos do lead
+  const [name, setName] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYearModel, setVehicleYearModel] = useState('');
+  const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [insuranceType, setInsuranceType] = useState('');
 
   const navigate = useNavigate();
 
+  // Função para criar lead
   const handleCriar = () => {
     if (
-      !nome ||
-      !modeloVeiculo ||
-      !anoModeloVeiculo ||
-      !cidade ||
-      !telefone ||
-      !tipoSeguro
+      !name ||
+      !vehicleModel ||
+      !vehicleYearModel ||
+      !city ||
+      !phone ||
+      !insuranceType
     ) {
       alert('Preencha todos os campos.');
       return;
     }
 
+    // Cria o objeto lead conforme o esperado pela planilha
     const novoLead = {
       ID: Date.now(),
-      name: nome,
-      vehicleModel: modeloVeiculo,
-      vehicleYearModel: anoModeloVeiculo,
-      city: cidade,
-      phone: telefone,
-      insuranceType: tipoSeguro,
+      name,
+      vehicleModel,
+      vehicleYearModel,
+      city,
+      phone,
+      insuranceType,
       data: new Date().toISOString().split('T')[0],
     };
 
+    // Envia para o Google Sheets
     criarLeadFunc(novoLead);
 
+    // Atualiza o estado local com o novo lead
     adicionarLead(novoLead);
 
+    // Navega para a página de listagem de leads
     navigate('/leads');
   };
 
+  // Função que chama o endpoint do Apps Script para criar lead
   const criarLeadFunc = async (lead) => {
     try {
       await fetch(
@@ -55,6 +62,7 @@ const CriarLead = ({ adicionarLead }) => {
           },
         }
       );
+      // Como usa no-cors, não tem resposta legível
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
     }
@@ -68,8 +76,8 @@ const CriarLead = ({ adicionarLead }) => {
         <label className="block text-gray-700">Nome</label>
         <input
           type="text"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -78,8 +86,8 @@ const CriarLead = ({ adicionarLead }) => {
         <label className="block text-gray-700">Modelo do Veículo</label>
         <input
           type="text"
-          value={modeloVeiculo}
-          onChange={(e) => setModeloVeiculo(e.target.value)}
+          value={vehicleModel}
+          onChange={(e) => setVehicleModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -88,8 +96,8 @@ const CriarLead = ({ adicionarLead }) => {
         <label className="block text-gray-700">Ano/Modelo</label>
         <input
           type="text"
-          value={anoModeloVeiculo}
-          onChange={(e) => setAnoModeloVeiculo(e.target.value)}
+          value={vehicleYearModel}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -98,8 +106,8 @@ const CriarLead = ({ adicionarLead }) => {
         <label className="block text-gray-700">Cidade</label>
         <input
           type="text"
-          value={cidade}
-          onChange={(e) => setCidade(e.target.value)}
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -108,8 +116,8 @@ const CriarLead = ({ adicionarLead }) => {
         <label className="block text-gray-700">Telefone</label>
         <input
           type="tel"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -117,8 +125,8 @@ const CriarLead = ({ adicionarLead }) => {
       <div>
         <label className="block text-gray-700">Tipo de Seguro</label>
         <select
-          value={tipoSeguro}
-          onChange={(e) => setTipoSeguro(e.target.value)}
+          value={insuranceType}
+          onChange={(e) => setInsuranceType(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           <option value="">Selecione</option>
