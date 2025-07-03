@@ -9,28 +9,28 @@ const CriarLead = ({ adicionarLead }) => {
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
   const [responsavel, setResponsavel] = useState('');
-  const [status, setStatus] = useState('');
-
+  const [status, setStatus] = useState('Em contato'); // pode ser padrão
   const navigate = useNavigate();
 
   const handleCriar = () => {
     if (!name || !phone) {
-      alert('Preencha pelo menos o nome e o telefone.');
+      alert('Preencha pelo menos o Nome e o Telefone.');
       return;
     }
 
     const novoLead = {
-      ID: Date.now(),
+      id: Date.now().toString(),
       name,
-      vehicleModel,
-      vehicleYearModel,
+      vehiclemodel: vehicleModel,
+      vehicleyearmodel: vehicleYearModel,
       city,
       phone,
-      insuranceType,
-      data: new Date().toISOString(),
+      insurancetype: insuranceType,
       responsavel,
       status,
+      data: new Date().toISOString(),
       editado: new Date().toISOString(),
+      origem: 'Leads', // pode ser omitido pois é padrão, mas deixei para clareza
     };
 
     criarLeadFunc(novoLead);
@@ -42,13 +42,16 @@ const CriarLead = ({ adicionarLead }) => {
 
   const criarLeadFunc = async (lead) => {
     try {
-      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead', {
+      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec', {
         method: 'POST',
         mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(lead),
+        body: JSON.stringify({
+          action: 'salvarLead',
+          lead: lead,
+        }),
       });
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
@@ -60,12 +63,13 @@ const CriarLead = ({ adicionarLead }) => {
       <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
 
       <div>
-        <label className="block text-gray-700">Nome</label>
+        <label className="block text-gray-700">Nome Completo</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Nome completo"
         />
       </div>
 
@@ -76,6 +80,7 @@ const CriarLead = ({ adicionarLead }) => {
           value={vehicleModel}
           onChange={(e) => setVehicleModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Modelo do veículo"
         />
       </div>
 
@@ -86,6 +91,7 @@ const CriarLead = ({ adicionarLead }) => {
           value={vehicleYearModel}
           onChange={(e) => setVehicleYearModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Ano do modelo"
         />
       </div>
 
@@ -96,16 +102,18 @@ const CriarLead = ({ adicionarLead }) => {
           value={city}
           onChange={(e) => setCity(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Cidade"
         />
       </div>
 
       <div>
         <label className="block text-gray-700">Telefone</label>
         <input
-          type="tel"
+          type="text"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Telefone"
         />
       </div>
 
@@ -116,6 +124,7 @@ const CriarLead = ({ adicionarLead }) => {
           value={insuranceType}
           onChange={(e) => setInsuranceType(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Tipo de seguro"
         />
       </div>
 
@@ -126,18 +135,22 @@ const CriarLead = ({ adicionarLead }) => {
           value={responsavel}
           onChange={(e) => setResponsavel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Responsável pelo lead"
         />
       </div>
 
       <div>
         <label className="block text-gray-700">Status</label>
-        <input
-          type="text"
+        <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          placeholder="Ex: Em contato, Fechado, Perdido..."
-        />
+        >
+          <option>Em contato</option>
+          <option>Fechado</option>
+          <option>Perdido</option>
+          <option>Sem contato</option>
+        </select>
       </div>
 
       <div className="flex justify-end">
