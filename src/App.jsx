@@ -499,7 +499,7 @@ const App = () => {
                 element={<CriarUsuario adicionarUsuario={adicionarUsuario} />}
               />
               {/* Rota criada para Criar Lead */}
-              <Route path="/criar-lead" element={<CriarLead />} />
+              <Route path="/criar-lead" element={<CriarLead fetchLeadsFromSheet={fetchLeadsFromSheet} />} />
             </>
           )}
           <Route
