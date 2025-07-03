@@ -1,143 +1,139 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead';
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 const CriarLead = ({ fetchLeadsFromSheet }) => {
-  const [name, setName] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [vehicleYearModel, setVehicleYearModel] = useState('');
-  const [city, setCity] = useState('');
-  const [phone, setPhone] = useState('');
-  const [insuranceType, setInsuranceType] = useState('');
+  const [form, setForm] = useState({
+    name: '',
+    vehiclemodel: '',
+    vehicleyearmodel: '',
+    city: '',
+    phone: '',
+    insurancetype: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [mensagem, setMensagem] = useState(null);
 
-  const navigate = useNavigate();
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleCriar = () => {
-    if (
-      !name ||
-      !vehicleModel ||
-      !vehicleYearModel ||
-      !city ||
-      !phone ||
-      !insuranceType
-    ) {
-      alert('Preencha todos os campos.');
-      return;
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMensagem(null);
 
-    const novoLead = {
+    const lead = {
       id: gerarId(),
-      name,
-      vehicleModel,
-      vehicleYearModel,
-      city,
-      phone,
-      insuranceType,
+      name: form.name,
+      vehiclemodel: form.vehiclemodel,
+      vehicleyearmodel: form.vehicleyearmodel,
+      city: form.city,
+      phone: form.phone,
+      insurancetype: form.insurancetype,
       data: new Date().toLocaleDateString('pt-BR'),
-      Responsável: '',
-      Status: '',
-      Editado: '',
+      responsável: '',
+      status: '',
+      editado: '',
       origem: 'Leads',
     };
 
-    criarLeadFunc(novoLead);
-
-    fetchLeadsFromSheet?.();
-
-    navigate('/leads');
-  };
-
-  const criarLeadFunc = async (lead) => {
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(lead),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'salvarLead', lead }),
       });
-    } catch (error) {
-      console.error('Erro ao enviar lead:', error);
+
+      setMensagem('Lead criado com sucesso!');
+      setForm({
+        name: '',
+        vehiclemodel: '',
+        vehicleyearmodel: '',
+        city: '',
+        phone: '',
+        insurancetype: '',
+      });
+
+      fetchLeadsFromSheet?.();
+    } catch (err) {
+      setMensagem('Erro ao enviar lead.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
-      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
+    <div className="p-6">
+      <h2 className="text-3xl font-bold mb-6 text-indigo-700">Criar Lead</h2>
 
-      <div>
-        <label className="block text-gray-700">Nome</label>
+      <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
         <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          required
+          name="name"
+          placeholder="Nome"
+          value={form.name}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
         />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Modelo do Veículo</label>
         <input
-          type="text"
-          value={vehicleModel}
-          onChange={(e) => setVehicleModel(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          required
+          name="vehiclemodel"
+          placeholder="Modelo do veículo"
+          value={form.vehiclemodel}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
         />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Ano/Modelo</label>
         <input
-          type="text"
-          value={vehicleYearModel}
-          onChange={(e) => setVehicleYearModel(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          required
+          name="vehicleyearmodel"
+          placeholder="Ano/Modelo"
+          value={form.vehicleyearmodel}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
         />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Cidade</label>
         <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          required
+          name="city"
+          placeholder="Cidade"
+          value={form.city}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
         />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Telefone</label>
         <input
-          type="text"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          required
+          name="phone"
+          placeholder="Telefone"
+          value={form.phone}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
         />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Tipo de Seguro</label>
         <input
-          type="text"
-          value={insuranceType}
-          onChange={(e) => setInsuranceType(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          required
+          name="insurancetype"
+          placeholder="Tipo de seguro (Auto, Moto…)"
+          value={form.insurancetype}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
         />
-      </div>
 
-      <div className="flex justify-end">
         <button
-          onClick={handleCriar}
-          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
+          type="submit"
+          disabled={loading}
+          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition ${
+            loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
         >
-          Criar Lead
+          {loading ? 'Salvando…' : 'Criar Lead'}
         </button>
-      </div>
+      </form>
+
+      {mensagem && (
+        <p className="mt-4 text-center text-sm text-indigo-600">{mensagem}</p>
+      )}
     </div>
   );
 };
