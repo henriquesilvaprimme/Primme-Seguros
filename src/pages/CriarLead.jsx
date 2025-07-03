@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 
-/** URL pública do seu Apps Script */
 const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
-/** Gera um ID simples: timestamp + número aleatório */
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 const CriarLead = ({ fetchLeadsFromSheet }) => {
@@ -16,6 +14,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     phone: '',
     insuranceType: '',
   });
+
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState(null);
 
@@ -27,7 +26,6 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     setLoading(true);
     setMensagem(null);
 
-    // Monta o objeto lead com as colunas da planilha (normalizadas)
     const lead = {
       id: gerarId(),
       name: form.name,
@@ -37,20 +35,21 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       phone: form.phone,
       insurancetype: form.insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsável: '', // se quiser, preencha com usuário logado
+      responsável: '',
       status: '',
       editado: '',
     };
 
     try {
-      const res = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // ESSENCIAL para evitar bloqueio CORS
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'salvarLead', lead }),
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lead), // <-- importante: envia diretamente o objeto lead
       });
 
-      // Como usamos no-cors, não conseguimos saber se deu certo pela resposta
       setMensagem('Lead criado com sucesso!');
       setForm({
         name: '',
@@ -60,8 +59,8 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         phone: '',
         insuranceType: '',
       });
-      // Recarrega lista, se a função foi passada como prop
-      fetchLeadsFromSheet?.();
+
+      fetchLeadsFromSheet?.(); // atualiza lista, se for passado via prop
     } catch (err) {
       setMensagem('Erro ao salvar lead.');
     } finally {
@@ -117,7 +116,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <input
           required
           name="insuranceType"
-          placeholder="Tipo de seguro (Auto, Moto…)"
+          placeholder="Tipo de seguro (Auto, Moto...)"
           value={form.insuranceType}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
@@ -130,7 +129,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
             loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
           }`}
         >
-          {loading ? 'Salvando…' : 'Criar Lead'}
+          {loading ? 'Salvando...' : 'Criar Lead'}
         </button>
       </form>
 
