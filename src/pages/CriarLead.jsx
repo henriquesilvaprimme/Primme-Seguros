@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const CriarLead = ({ adicionarLead }) => {
+  // campos
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
@@ -10,42 +11,50 @@ const CriarLead = ({ adicionarLead }) => {
 
   const navigate = useNavigate();
 
+  /** envia ao Apps Script e atualiza state local */
   const handleCriar = () => {
     if (!name || !phone || !vehicleModel || !vehicleYearModel || !city) {
       alert('Preencha todos os campos.');
       return;
     }
 
-    // objeto no mesmo estilo dos leads que já vêm do Sheets
+    // objeto COM os mesmos nomes usados no seu fetchLeadsFromSheet()
     const novoLead = {
-      id: Date.now(),                       // id local provisório
-      name,
-      phone,
-      vehicleModel,
-      vehicleYearModel,
-      city,
-      insuranceType: '',                    // vazio por padrão
+      id: crypto.randomUUID(),      // id único
+      name,                         // Nome
+      phone,                        // Telefone
+      vehiclemodel: vehicleModel,   // modelo (minúsculo, sem CamelCase)
+      vehicleyearmodel: vehicleYearModel, // ano/modelo
+      city,                         // Cidade
+      insurancetype: '',            // vazio por padrão
       status: 'Novo',
       confirmado: false,
-      createdAt: new Date().toISOString(),
+      responsavel: null,
+      editado: new Date().toISOString()
     };
 
+    // grava em memória imediata
+    if (typeof adicionarLead === 'function') adicionarLead(novoLead);
+
+    // envia ao Google Sheets
     criarLeadFunc(novoLead);
-    adicionarLead(novoLead);                // atualiza state local
-    navigate('/leads');                     // volta para listagem
+
+    // volta para listagem
+    navigate('/leads');
   };
 
+  /** chamada ao Apps Script */
   const criarLeadFunc = async (lead) => {
     try {
+      console.log('Enviando lead ao Apps Script:', lead); // debug
       await fetch(
+        // Mesma URL‑base; só muda o parâmetro ?v=criar_lead  (confira se seu Apps Script usa exatamente esse nome)
         'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
         {
           method: 'POST',
           mode: 'no-cors',
           body: JSON.stringify(lead),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' }
         }
       );
     } catch (error) {
@@ -55,10 +64,9 @@ const CriarLead = ({ adicionarLead }) => {
 
   return (
     <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
-      <h2 className="text-3xl font-bold text-indigo-700 mb-4">
-        Criar Novo Lead
-      </h2>
+      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
 
+      {/* Nome */}
       <div>
         <label className="block text-gray-700">Nome</label>
         <input
@@ -69,6 +77,7 @@ const CriarLead = ({ adicionarLead }) => {
         />
       </div>
 
+      {/* Telefone */}
       <div>
         <label className="block text-gray-700">Telefone</label>
         <input
@@ -79,6 +88,7 @@ const CriarLead = ({ adicionarLead }) => {
         />
       </div>
 
+      {/* Modelo */}
       <div>
         <label className="block text-gray-700">Modelo do Veículo</label>
         <input
@@ -89,6 +99,7 @@ const CriarLead = ({ adicionarLead }) => {
         />
       </div>
 
+      {/* Ano / Modelo */}
       <div>
         <label className="block text-gray-700">Ano/Modelo</label>
         <input
@@ -99,6 +110,7 @@ const CriarLead = ({ adicionarLead }) => {
         />
       </div>
 
+      {/* Cidade */}
       <div>
         <label className="block text-gray-700">Cidade</label>
         <input
