@@ -15,13 +15,12 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     insuranceType: '',
   });
 
-  const [mensagem, setMensagem] = useState(null);
   const navigate = useNavigate();
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleCriar = async () => {
+  const handleCriar = () => {
     if (
       !form.name ||
       !form.vehicleModel ||
@@ -49,34 +48,27 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       origem: 'Leads',
     };
 
+    criarLeadFunc(novoLead);
+
+    if (fetchLeadsFromSheet) fetchLeadsFromSheet();
+    navigate('/leads');
+  };
+
+  const criarLeadFunc = async (lead) => {
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           action: 'salvarLead',
-          lead: novoLead,
+          lead,
         }),
       });
-
-      if (fetchLeadsFromSheet) fetchLeadsFromSheet();
-      setMensagem('Lead criado com sucesso!');
-
-      setForm({
-        name: '',
-        vehicleModel: '',
-        vehicleYearModel: '',
-        city: '',
-        phone: '',
-        insuranceType: '',
-      });
-
-      navigate('/leads');
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
-      setMensagem('Erro ao enviar lead.');
     }
   };
 
@@ -158,10 +150,6 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
           Criar Lead
         </button>
       </div>
-
-      {mensagem && (
-        <p className="text-center text-sm text-indigo-600">{mensagem}</p>
-      )}
     </div>
   );
 };
