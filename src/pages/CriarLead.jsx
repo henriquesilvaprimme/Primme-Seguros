@@ -1,33 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead';
 
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 const CriarLead = ({ fetchLeadsFromSheet }) => {
-  const [form, setForm] = useState({
-    name: '',
-    vehicleModel: '',
-    vehicleYearModel: '',
-    city: '',
-    phone: '',
-    insuranceType: '',
-  });
+  const [name, setName] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYearModel, setVehicleYearModel] = useState('');
+  const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [insuranceType, setInsuranceType] = useState('');
 
   const navigate = useNavigate();
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
   const handleCriar = () => {
     if (
-      !form.name ||
-      !form.vehicleModel ||
-      !form.vehicleYearModel ||
-      !form.city ||
-      !form.phone ||
-      !form.insuranceType
+      !name ||
+      !vehicleModel ||
+      !vehicleYearModel ||
+      !city ||
+      !phone ||
+      !insuranceType
     ) {
       alert('Preencha todos os campos.');
       return;
@@ -35,22 +31,23 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
 
     const novoLead = {
       id: gerarId(),
-      name: form.name,
-      vehiclemodel: form.vehicleModel,
-      vehicleyearmodel: form.vehicleYearModel,
-      city: form.city,
-      phone: form.phone,
-      insurancetype: form.insuranceType,
+      name,
+      vehicleModel,
+      vehicleYearModel,
+      city,
+      phone,
+      insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsavel: '',
-      status: '',
-      editado: '',
+      Responsável: '',
+      Status: '',
+      Editado: '',
       origem: 'Leads',
     };
 
     criarLeadFunc(novoLead);
 
-    if (fetchLeadsFromSheet) fetchLeadsFromSheet();
+    fetchLeadsFromSheet?.();
+
     navigate('/leads');
   };
 
@@ -62,10 +59,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'salvarLead',
-          lead,
-        }),
+        body: JSON.stringify(lead),
       });
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
@@ -80,10 +74,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <label className="block text-gray-700">Nome</label>
         <input
           type="text"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -91,10 +84,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <label className="block text-gray-700">Modelo do Veículo</label>
         <input
           type="text"
-          name="vehicleModel"
-          value={form.vehicleModel}
-          onChange={handleChange}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          value={vehicleModel}
+          onChange={(e) => setVehicleModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -102,10 +94,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <label className="block text-gray-700">Ano/Modelo</label>
         <input
           type="text"
-          name="vehicleYearModel"
-          value={form.vehicleYearModel}
-          onChange={handleChange}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          value={vehicleYearModel}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -113,10 +104,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <label className="block text-gray-700">Cidade</label>
         <input
           type="text"
-          name="city"
-          value={form.city}
-          onChange={handleChange}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -124,10 +114,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <label className="block text-gray-700">Telefone</label>
         <input
           type="text"
-          name="phone"
-          value={form.phone}
-          onChange={handleChange}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -135,10 +124,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <label className="block text-gray-700">Tipo de Seguro</label>
         <input
           type="text"
-          name="insuranceType"
-          value={form.insuranceType}
-          onChange={handleChange}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          value={insuranceType}
+          onChange={(e) => setInsuranceType(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
