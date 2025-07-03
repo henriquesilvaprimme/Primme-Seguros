@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 
 // URL do seu Apps Script
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
-// Função para gerar ID aleatório
+// Gera ID baseado em timestamp + número aleatório
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 const CriarLead = ({ fetchLeadsFromSheet }) => {
@@ -15,11 +16,13 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     phone: '',
     insuranceType: '',
   });
+
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState(null);
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,14 +46,12 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        mode: 'no-cors', // evita o bloqueio de CORS
         body: JSON.stringify({
           action: 'salvarLead',
           lead: lead,
         }),
+        // Importante: NÃO definir headers aqui para não disparar preflight (CORS)
       });
 
       setMensagem('Lead criado com sucesso!');
@@ -62,10 +63,9 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         phone: '',
         insuranceType: '',
       });
-
       fetchLeadsFromSheet?.();
     } catch (err) {
-      setMensagem('Erro ao salvar lead.');
+      setMensagem('Erro ao salvar o lead.');
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <input
           required
           name="insuranceType"
-          placeholder="Tipo de seguro (Auto, Moto...)"
+          placeholder="Tipo de seguro (Auto, Moto…)"
           value={form.insuranceType}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
