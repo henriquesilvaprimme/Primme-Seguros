@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 
-// Mesma URL usada no Usuario.jsx
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
-// Função para gerar ID aleatório
-const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1000000)}`;
 
-const CriarLead = ({ fetchLeadsFromSheet }) => {
+export default function CriarLead({ fetchLeadsFromSheet }) {
   const [form, setForm] = useState({
     name: '',
     vehicleModel: '',
@@ -16,17 +15,19 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     insuranceType: '',
   });
   const [loading, setLoading] = useState(false);
-  const [mensagem, setMensagem] = useState(null);
+  const [mensagem, setMensagem] = useState('');
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMensagem(null);
+    setMensagem('');
 
-    const lead = {
+    // Monta o objeto lead com campo origem fixo para salvar na aba "Leads"
+    const novoLead = {
       id: gerarId(),
       name: form.name,
       vehiclemodel: form.vehicleModel,
@@ -35,22 +36,23 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       phone: form.phone,
       insurancetype: form.insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsável: '',
+      origem: 'Leads',  // <<< ESSENCIAL para salvar na aba correta
       status: '',
+      responsavel: '',
       editado: '',
     };
 
     try {
-      await fetch(SCRIPT_URL + '?v=salvar_lead', {
+      await fetch(`${SCRIPT_URL}?v=salvar_lead`, {
         method: 'POST',
-        mode: 'no-cors', // ESSENCIAL para evitar erro de CORS
+        mode: 'no-cors', // remove o problema CORS, mas não permite ler resposta
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: 'salvar_lead', lead }),
+        body: JSON.stringify({ lead: novoLead }),
       });
 
-      setMensagem('Lead criado com sucesso!');
+      setMensagem('✅ Lead criado com sucesso!');
       setForm({
         name: '',
         vehicleModel: '',
@@ -59,19 +61,19 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         phone: '',
         insuranceType: '',
       });
+
       fetchLeadsFromSheet?.();
-    } catch (err) {
-      setMensagem('Erro ao criar lead.');
+    } catch (error) {
+      setMensagem('❌ Erro ao salvar o lead.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-3xl font-bold mb-6 text-indigo-700">Criar Lead</h2>
-
-      <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
+    <div className="p-6 max-w-xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-blue-700">Criar Lead</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input
           required
           name="name"
@@ -115,28 +117,24 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <input
           required
           name="insuranceType"
-          placeholder="Tipo de seguro (Auto, Moto…)"
+          placeholder="Tipo de seguro (Auto, Moto, etc.)"
           value={form.insuranceType}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
         />
-
         <button
           type="submit"
           disabled={loading}
-          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition ${
-            loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
+          className={`w-full bg-blue-600 text-white py-2 rounded ${
+            loading ? 'opacity-50' : 'hover:bg-blue-700'
           }`}
         >
-          {loading ? 'Salvando…' : 'Criar Lead'}
+          {loading ? 'Salvando...' : 'Criar Lead'}
         </button>
       </form>
-
       {mensagem && (
-        <p className="mt-4 text-center text-sm text-indigo-600">{mensagem}</p>
+        <p className="mt-4 text-center text-sm text-indigo-700">{mensagem}</p>
       )}
     </div>
   );
-};
-
-export default CriarLead;
+}
