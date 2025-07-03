@@ -211,6 +211,46 @@ const App = () => {
     },
   ]);*/
 
+  const [leads, setLeads] = useState([]); // Começa vazio
+
+useEffect(() => {
+  const fetchLeadsFromSheet = async () => {
+    try {
+      const response = await fetch(GOOGLE_SHEETS_LEADS + '?v=pegar_lead');
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        const formattedLeads = data.map((item) => ({
+          ID: item.ID || '',
+          name: item.name || '',
+          vehicleModel: item.vehicleModel || '',
+          vehicleYearModel: item.vehicleYearModel || '',
+          city: item.city || '',
+          phone: item.phone || '',
+          insuranceType: item.insuranceType || '',
+          data: item.data || '',
+        }));
+
+        setLeads(formattedLeads);
+      } else {
+        setLeads([]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar leads do Google Sheets:', error);
+      setLeads([]);
+    }
+  };
+
+  fetchLeadsFromSheet();
+
+  const interval = setInterval(() => {
+    fetchLeadsFromSheet();
+  }, 60000);
+
+  return () => clearInterval(interval);
+}, []);
+
+
   const [ultimoFechadoId, setUltimoFechadoId] = useState(null);
 
   const adicionarUsuario = (usuario) => {
