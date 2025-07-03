@@ -10,7 +10,7 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
-import CriarLead from './pages/CriarLead'; // nova página
+import Ranking from './pages/CriarLead';
 
 //const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeZteouyVWzrCvgHHQttx-5Bekgs_k-5EguO9Sn2p-XFrivFg9S7_gGKLdoDfCa08/exec';
 
@@ -35,6 +35,7 @@ const App = () => {
   }, []);
 
   // INÍCIO - sincronização leads via Google Sheets
+  const [leads, setLeads] = useState([]);
   const [leadSelecionado, setLeadSelecionado] = useState(null); // movido para cá para usar no useEffect
 
   const fetchLeadsFromSheet = async () => {
@@ -210,54 +211,12 @@ const App = () => {
     },
   ]);*/
 
-  const [leads, setLeads] = useState([]); // Começa vazio
-
-useEffect(() => {
-  const fetchLeadsFromSheet = async () => {
-    try {
-      const response = await fetch(GOOGLE_SHEETS_LEADS + '?v=pegar_lead');
-      const data = await response.json();
-
-      if (Array.isArray(data)) {
-        const formattedLeads = data.map((item) => ({
-          id: item.id || '',
-          name: item.name || '',
-          vehicleModel: item.vehicleModel || '',
-          vehicleYearModel: item.vehicleYearModel || '',
-          city: item.city || '',
-          phone: item.phone || '',
-          insuranceType: item.insuranceType || '',
-          data: item.data || '',
-        }));
-
-        setLeads(formattedLeads);
-      } else {
-        setLeads([]);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar leads do Google Sheets:', error);
-      setLeads([]);
-    }
-  };
-
-  fetchLeadsFromSheet();
-
-  const interval = setInterval(() => {
-    fetchLeadsFromSheet();
-  }, 60000);
-
-  return () => clearInterval(interval);
-}, []);
-
-
   const [ultimoFechadoId, setUltimoFechadoId] = useState(null);
 
   const adicionarUsuario = (usuario) => {
     setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
   };
-const adicionarLead = (novoLead) => {
-  setLeads((prev) => [...prev, novoLead]);
-};
+
 
 
   const atualizarStatusLeadAntigo = (id, novoStatus, phone) => {
@@ -643,31 +602,23 @@ const adicionarLead = (novoLead) => {
                 fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
                 />} />
           {isAdmin && (
-  <>
-    <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
-    <Route
-      path="/criar-lead"
-      element={
-        <CriarLead
-          adicionarLead={adicionarLead}
-        />
-      }
-    />
-    <Route
-      path="/usuarios"
-      element={
-        <Usuarios
-          leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
-          usuarios={usuarios}
-          fetchLeadsFromSheet={fetchLeadsFromSheet}
-          fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
-          atualizarStatusUsuario={atualizarStatusUsuario}
-        />
-      }
-    />
-  </>
-)}
-
+            <>
+              <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
+              <Route
+                path="/usuarios"
+                element={
+                  <Usuarios
+                    leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                    
+                    usuarios={usuarios}
+                    fetchLeadsFromSheet={fetchLeadsFromSheet}
+                    fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                    atualizarStatusUsuario={atualizarStatusUsuario}
+                  />
+                }
+              />
+            </>
+          )}
           <Route path="/ranking" element={<Ranking 
                 usuarios={usuarios} 
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
