@@ -8,49 +8,49 @@ const CriarLead = ({ adicionarLead }) => {
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
+  const [data, setData] = useState('');
 
   const navigate = useNavigate();
 
   const handleCriar = () => {
-    if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType) {
+    if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType || !data) {
       alert('Por favor, preencha todos os campos.');
       return;
     }
 
     const novoLead = {
-      id: Date.now(), // id numérico único
+      id: Date.now(), // ID único baseado no timestamp
       name,
       vehicleModel,
       vehicleYearModel,
       city,
       phone,
       insuranceType,
-      data: new Date().toISOString(),
+      data,
     };
 
     criarLeadFunc(novoLead);
 
-    adicionarLead && adicionarLead(novoLead);
+    adicionarLead(novoLead);
 
-    navigate('/leads'); // ajusta para sua rota que lista os leads
+    navigate('/leads');
   };
 
   const criarLeadFunc = async (lead) => {
     try {
-      const response = await fetch(
+      await fetch(
         'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
         {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
+          mode: 'no-cors', // importante para evitar bloqueios CORS
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(lead),
         }
       );
-      // Se quiser checar resposta: 
-      // const result = await response.json();
-      // console.log(result);
     } catch (error) {
-      console.error('Erro ao criar lead:', error);
+      console.error('Erro ao enviar lead:', error);
     }
   };
 
@@ -79,7 +79,7 @@ const CriarLead = ({ adicionarLead }) => {
       </div>
 
       <div>
-        <label className="block text-gray-700">Ano do Modelo</label>
+        <label className="block text-gray-700">Ano do Modelo do Veículo</label>
         <input
           type="text"
           value={vehicleYearModel}
@@ -114,6 +114,16 @@ const CriarLead = ({ adicionarLead }) => {
           type="text"
           value={insuranceType}
           onChange={(e) => setInsuranceType(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Data</label>
+        <input
+          type="date"
+          value={data}
+          onChange={(e) => setData(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
