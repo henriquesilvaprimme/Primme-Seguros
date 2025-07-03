@@ -35,7 +35,6 @@ const App = () => {
   }, []);
 
   // INÍCIO - sincronização leads via Google Sheets
-  const [leads, setLeads] = useState([]);
   const [leadSelecionado, setLeadSelecionado] = useState(null); // movido para cá para usar no useEffect
 
   const fetchLeadsFromSheet = async () => {
