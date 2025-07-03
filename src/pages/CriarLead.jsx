@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 
-/** URL pública do seu Apps Script */
 const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
-/** Gera um ID simples: timestamp + número aleatório */
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 const CriarLead = ({ fetchLeadsFromSheet }) => {
@@ -36,19 +34,18 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       phone: form.phone,
       insurancetype: form.insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsável: '', // pode ajustar conforme sua necessidade
+      responsável: '',
       status: '',
       editado: '',
     };
 
     try {
-      const res = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'salvarLead', lead }),
       });
-
-      if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
 
       setMensagem('Lead criado com sucesso!');
       setForm({
@@ -60,10 +57,10 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         insuranceType: '',
       });
 
-      // Se for passado, chama função para recarregar leads
+      // Atualiza os leads no app principal
       fetchLeadsFromSheet?.();
     } catch (err) {
-      setMensagem(err.message);
+      setMensagem('Erro ao enviar lead.');
     } finally {
       setLoading(false);
     }
@@ -117,7 +114,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         <input
           required
           name="insuranceType"
-          placeholder="Tipo de seguro (Auto, Moto...)"
+          placeholder="Tipo de seguro (Auto, Moto…)"
           value={form.insuranceType}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
