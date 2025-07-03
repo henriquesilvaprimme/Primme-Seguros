@@ -27,34 +27,39 @@ export default function CriarLead() {
     setLead((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
+  async function salvarLead() {
     if (!lead.id) {
-      const newId = gerarId();
-      setLead((prev) => ({ ...prev, id: newId }));
-      lead.id = newId; // para enviar
+      lead.id = gerarId();
+      setLead((prev) => ({ ...prev, id: lead.id }));
     }
 
-    const body = {
-      action: "salvarLead",
-      lead: lead,
-    };
+    const response = await fetch(
+      "https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          action: "salvarLead",
+          lead: lead,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Erro ao salvar lead: " + response.statusText);
+    }
+
+    const text = await response.text();
+    return text;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setMessage("");
 
     try {
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec",
-        {
-          method: "POST",
-          body: JSON.stringify(body),
-        }
-      );
+      const result = await salvarLead();
 
-      if (!response.ok) throw new Error("Erro na requisição: " + response.statusText);
-
-      const text = await response.text();
-
-      if (text.includes("adicionado") || text.includes("ok")) {
+      if (result.includes("adicionado") || result.includes("ok")) {
         setMessage("Lead salvo com sucesso!");
         setLead({
           id: "",
@@ -71,18 +76,17 @@ export default function CriarLead() {
           editado: "",
         });
       } else {
-        setMessage("Resposta inesperada: " + text);
+        setMessage("Resposta inesperada: " + result);
       }
     } catch (error) {
-      setMessage("Erro ao salvar lead: " + error.message);
+      setMessage("Erro: " + error.message);
     }
   }
 
   return (
     <div style={{ maxWidth: 500, margin: "auto", padding: 20, fontFamily: "Arial, sans-serif" }}>
       <h2 style={{ textAlign: "center" }}>Criar Lead</h2>
-
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <input
           name="name"
           placeholder="Nome"
@@ -150,9 +154,14 @@ export default function CriarLead() {
           Salvar Lead
         </button>
       </form>
-
       {message && (
-        <p style={{ marginTop: 16, textAlign: "center", color: message.includes("erro") ? "red" : "green" }}>
+        <p
+          style={{
+            marginTop: 16,
+            textAlign: "center",
+            color: message.toLowerCase().includes("erro") ? "red" : "green",
+          }}
+        >
           {message}
         </p>
       )}
