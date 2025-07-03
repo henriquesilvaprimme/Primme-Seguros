@@ -178,16 +178,14 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h1 style={{ margin: 0 }}>Leads</h1>
 
-            <button title='Clique para atualizar os dados'
-              onClick={() => {
-                fetchLeadsFromSheet();
-                //fetchLeadsFechadosFromSheet();
-                //fetchUsuariosFromSheet();
-              }}
-            >
-              🔄
-            </button>
-        </div>
+            <button title='Clique para atualizar os dados' onClick={handleAtualizar}>
+        🔄
+      </button>
+
+      {atualizando && <span style={{ marginLeft: '10px' }}>Atualizando Página...</span>}
+    </div>
+  );
+};
 
         {/* Filtro nome - centralizado */}
         <div
