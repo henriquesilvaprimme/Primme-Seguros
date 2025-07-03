@@ -34,60 +34,51 @@ export default function CriarLead() {
       lead.id = newId; // Atualiza no objeto antes do envio
     }
 
-    const response = await fetch(
-      "https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          action: "salvarLead",
-          lead: lead,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Erro ao salvar lead: " + response.statusText);
+    try {
+      await fetch(
+        "https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec",
+        {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify({
+            action: "salvarLead",
+            lead: lead,
+          }),
+        }
+      );
+      // Com no-cors, não dá para ler a resposta, então damos mensagem padrão:
+      setMessage("Lead enviado! (Não é possível confirmar sucesso por causa do no-cors)");
+    } catch (error) {
+      setMessage("Erro ao enviar lead: " + error.message);
     }
-
-    const text = await response.text();
-    return text;
   }
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
+    salvarLead();
 
-    try {
-      const result = await salvarLead();
-
-      if (result.includes("adicionado") || result.includes("ok")) {
-        setMessage("Lead salvo com sucesso!");
-        setLead({
-          id: "",
-          name: "",
-          vehiclemodel: "",
-          vehicleyearmodel: "",
-          city: "",
-          phone: "",
-          insurancetype: "",
-          data: "",
-          origem: "Leads",
-          status: "",
-          responsavel: "",
-          editado: "",
-        });
-      } else {
-        setMessage("Resposta inesperada: " + result);
-      }
-    } catch (error) {
-      setMessage("Erro: " + error.message);
-    }
+    // Resetar formulário independentemente da resposta, pois não temos retorno:
+    setLead({
+      id: "",
+      name: "",
+      vehiclemodel: "",
+      vehicleyearmodel: "",
+      city: "",
+      phone: "",
+      insurancetype: "",
+      data: "",
+      origem: "Leads",
+      status: "",
+      responsavel: "",
+      editado: "",
+    });
   }
 
   return (
-    <div className="container-criar-lead" style={{ maxWidth: 400, margin: "auto", padding: 20 }}>
+    <div className="container-criar-lead">
       <h2>Criar Lead</h2>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <form onSubmit={handleSubmit}>
         <label>
           Nome:
           <input
@@ -96,7 +87,6 @@ export default function CriarLead() {
             value={lead.name}
             onChange={handleChange}
             required
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
@@ -107,7 +97,6 @@ export default function CriarLead() {
             name="vehiclemodel"
             value={lead.vehiclemodel}
             onChange={handleChange}
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
@@ -118,7 +107,6 @@ export default function CriarLead() {
             name="vehicleyearmodel"
             value={lead.vehicleyearmodel}
             onChange={handleChange}
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
@@ -129,7 +117,6 @@ export default function CriarLead() {
             name="city"
             value={lead.city}
             onChange={handleChange}
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
@@ -140,7 +127,6 @@ export default function CriarLead() {
             name="phone"
             value={lead.phone}
             onChange={handleChange}
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
@@ -151,7 +137,6 @@ export default function CriarLead() {
             name="insurancetype"
             value={lead.insurancetype}
             onChange={handleChange}
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
@@ -162,26 +147,13 @@ export default function CriarLead() {
             name="data"
             value={lead.data}
             onChange={handleChange}
-            style={{ width: "100%", padding: 8 }}
           />
         </label>
 
-        <button
-          type="submit"
-          style={{
-            padding: "10px",
-            backgroundColor: "#0070f3",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-          }}
-        >
-          Salvar Lead
-        </button>
+        <button type="submit">Salvar Lead</button>
       </form>
 
-      {message && <p style={{ marginTop: 15 }}>{message}</p>}
+      {message && <p className="message">{message}</p>}
     </div>
   );
 }
