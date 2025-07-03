@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -603,8 +604,8 @@ const App = () => {
                 />} />
           {isAdmin && (
   <>
-    <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
     <Route path="/criar-lead" element={<CriarLead />} />
+    <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
     <Route
       path="/usuarios"
       element={
