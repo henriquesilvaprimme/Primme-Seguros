@@ -10,6 +10,7 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
+import CriarLead from './pages/CriarLead';
 
 //const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeZteouyVWzrCvgHHQttx-5Bekgs_k-5EguO9Sn2p-XFrivFg9S7_gGKLdoDfCa08/exec';
 
@@ -601,6 +602,23 @@ const App = () => {
                 fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
                 />} />
           {isAdmin && (
+  <>
+    <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
+    <Route path="/criar-lead" element={<CriarLead />} />
+    <Route
+      path="/usuarios"
+      element={
+        <Usuarios
+          leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+          usuarios={usuarios}
+          fetchLeadsFromSheet={fetchLeadsFromSheet}
+          fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+          atualizarStatusUsuario={atualizarStatusUsuario}
+        />
+      }
+    />
+  </>
+)}
             <>
               <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
               <Route
