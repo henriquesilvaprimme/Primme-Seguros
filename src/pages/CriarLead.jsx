@@ -1,139 +1,137 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const CriarLead = () => {
+  const [name, setName] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYearModel, setVehicleYearModel] = useState('');
+  const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [insuranceType, setInsuranceType] = useState('');
 
-export default function CriarLead() {
-  const [form, setForm] = useState({
-    name: '',
-    vehicleModel: '',
-    vehicleYearModel: '',
-    city: '',
-    phone: '',
-    insuranceType: '',
-  });
+  const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const handleCriar = () => {
+    if (!name || !vehicleModel || !vehicleYearModel || !city || !phone) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
-
-    // Monta o objeto para enviar ao Google Sheets
-    const leadData = {
-      action: 'add_lead',  // por exemplo, no seu Apps Script pode ser usado para diferenciar a ação
-      lead: {
-        id: crypto.randomUUID(),
-        name: form.name,
-        vehiclemodel: form.vehicleModel,
-        vehicleyearmodel: form.vehicleYearModel,
-        city: form.city,
-        phone: form.phone,
-        insurancetype: form.insuranceType,
-        status: 'Novo',
-        criadoEm: new Date().toISOString(),
-      },
+    const novoLead = {
+      id: Date.now(),
+      name,
+      vehiclemodel: vehicleModel,
+      vehicleyearmodel: vehicleYearModel,
+      city,
+      phone,
+      insurancetype: insuranceType,
+      status: 'Novo',
+      criadoEm: new Date().toISOString(),
     };
 
-    try {
-      await fetch(GOOGLE_SHEETS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // geralmente usado para Google Apps Script
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(leadData),
-      });
+    criarLeadFunc(novoLead);
 
-      setMessage('Lead criado com sucesso!');
-      setForm({
-        name: '',
-        vehicleModel: '',
-        vehicleYearModel: '',
-        city: '',
-        phone: '',
-        insuranceType: '',
-      });
+    // Opcional: navegar para a lista de leads após criar
+    navigate('/leads');
+  };
+
+  const criarLeadFunc = async (lead) => {
+    try {
+      await fetch(
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify(lead),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     } catch (error) {
-      setMessage('Erro ao criar lead.');
-      console.error('Erro:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao enviar lead:', error);
     }
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Criar Novo Lead</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
+      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
+
+      <div>
+        <label className="block text-gray-700">Nome Completo</label>
         <input
           type="text"
-          name="name"
-          placeholder="Nome"
-          value={form.name}
-          onChange={handleChange}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required
-          className="border p-2 rounded"
         />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Modelo do Veículo</label>
         <input
           type="text"
-          name="vehicleModel"
-          placeholder="Modelo do Veículo"
-          value={form.vehicleModel}
-          onChange={handleChange}
+          value={vehicleModel}
+          onChange={(e) => setVehicleModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required
-          className="border p-2 rounded"
         />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Ano do Veículo</label>
         <input
           type="text"
-          name="vehicleYearModel"
-          placeholder="Ano do Veículo"
-          value={form.vehicleYearModel}
-          onChange={handleChange}
+          value={vehicleYearModel}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required
-          className="border p-2 rounded"
         />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Cidade</label>
         <input
           type="text"
-          name="city"
-          placeholder="Cidade"
-          value={form.city}
-          onChange={handleChange}
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required
-          className="border p-2 rounded"
         />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Telefone</label>
         <input
           type="tel"
-          name="phone"
-          placeholder="Telefone"
-          value={form.phone}
-          onChange={handleChange}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required
-          className="border p-2 rounded"
         />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Tipo de Seguro (opcional)</label>
         <input
           type="text"
-          name="insuranceType"
-          placeholder="Tipo de Seguro"
-          value={form.insuranceType}
-          onChange={handleChange}
-          className="border p-2 rounded"
+          value={insuranceType}
+          onChange={(e) => setInsuranceType(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
+      </div>
+
+      <div className="flex justify-end">
         <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          onClick={handleCriar}
+          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
         >
-          {loading ? 'Enviando...' : 'Salvar Lead'}
+          Criar Lead
         </button>
-      </form>
-      {message && <p className="mt-4">{message}</p>}
+      </div>
     </div>
   );
-}
+};
+
+export default CriarLead;
