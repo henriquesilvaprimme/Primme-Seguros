@@ -41,11 +41,16 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       editado: '',
     };
 
+    // Monta os dados no formato URL encoded para evitar preflight
+    const params = new URLSearchParams();
+    params.append('action', 'salvarLead');
+    params.append('lead', JSON.stringify(lead));
+
     try {
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'salvarLead', lead }),
-        // Aqui removemos o header Content-Type para evitar preflight
+        body: params,
+        // não define headers para evitar preflight
       });
 
       if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
