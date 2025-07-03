@@ -1,139 +1,137 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const CriarLead = ({ adicionarLead }) => {
+  const [name, setName] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYearModel, setVehicleYearModel] = useState('');
+  const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [insuranceType, setInsuranceType] = useState('');
 
-const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+  const navigate = useNavigate();
 
-const CriarLead = ({ fetchLeadsFromSheet }) => {
-  const [form, setForm] = useState({
-    name: '',
-    vehiclemodel: '',
-    vehicleyearmodel: '',
-    city: '',
-    phone: '',
-    insurancetype: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [mensagem, setMensagem] = useState(null);
+  const handleCriar = () => {
+    if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType) {
+      alert('Preencha todos os campos.');
+      return;
+    }
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMensagem(null);
-
-    const lead = {
-      id: gerarId(),
-      name: form.name,
-      vehiclemodel: form.vehiclemodel,
-      vehicleyearmodel: form.vehicleyearmodel,
-      city: form.city,
-      phone: form.phone,
-      insurancetype: form.insurancetype,
-      data: new Date().toLocaleDateString('pt-BR'),
+    const novoLead = {
+      ID: Date.now(),
+      name,
+      vehicleModel,
+      vehicleYearModel,
+      city,
+      phone,
+      insuranceType,
+      data: new Date().toISOString().split('T')[0], // data atual no formato YYYY-MM-DD
       responsavel: '',
-      status: '',
+      status: 'Novo',
       editado: '',
-      origem: 'Leads',
     };
 
+    criarLeadFunc(novoLead);
+
+    adicionarLead(novoLead);
+
+    navigate('/leads');
+  };
+
+  const criarLeadFunc = async (lead) => {
     try {
-      await fetch(SCRIPT_URL, {
+      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead', {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'salvarLead', lead }),
+        body: JSON.stringify(lead),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-
-      setMensagem('Lead criado com sucesso!');
-      setForm({
-        name: '',
-        vehiclemodel: '',
-        vehicleyearmodel: '',
-        city: '',
-        phone: '',
-        insurancetype: '',
-      });
-
-      fetchLeadsFromSheet?.();
-    } catch (err) {
-      setMensagem('Erro ao enviar lead.');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao enviar lead:', error);
     }
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-3xl font-bold mb-6 text-indigo-700">Criar Lead</h2>
+    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
+      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
 
-      <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
+      <div>
+        <label className="block text-gray-700">Nome Completo</label>
         <input
-          required
-          name="name"
-          placeholder="Nome"
-          value={form.name}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
-        <input
-          required
-          name="vehiclemodel"
-          placeholder="Modelo do veículo"
-          value={form.vehiclemodel}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
-        />
-        <input
-          required
-          name="vehicleyearmodel"
-          placeholder="Ano/Modelo"
-          value={form.vehicleyearmodel}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
-        />
-        <input
-          required
-          name="city"
-          placeholder="Cidade"
-          value={form.city}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
-        />
-        <input
-          required
-          name="phone"
-          placeholder="Telefone"
-          value={form.phone}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
-        />
-        <input
-          required
-          name="insurancetype"
-          placeholder="Tipo de seguro (Auto, Moto…)"
-          value={form.insurancetype}
-          onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
-        />
+      </div>
 
+      <div>
+        <label className="block text-gray-700">Modelo do Veículo</label>
+        <input
+          type="text"
+          value={vehicleModel}
+          onChange={(e) => setVehicleModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Ex: Fiat Toro"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Ano Modelo do Veículo</label>
+        <input
+          type="number"
+          value={vehicleYearModel}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Ex: 2022"
+          min="1900"
+          max={new Date().getFullYear() + 1}
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Cidade</label>
+        <input
+          type="text"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Ex: São Paulo"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Telefone</label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="(XX) XXXXX-XXXX"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Tipo de Seguro</label>
+        <input
+          type="text"
+          value={insuranceType}
+          onChange={(e) => setInsuranceType(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Ex: Auto, Moto, Residencial"
+        />
+      </div>
+
+      <div className="flex justify-end">
         <button
-          type="submit"
-          disabled={loading}
-          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition ${
-            loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
-          }`}
+          onClick={handleCriar}
+          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
         >
-          {loading ? 'Salvando…' : 'Criar Lead'}
+          Criar Lead
         </button>
-      </form>
-
-      {mensagem && (
-        <p className="mt-4 text-center text-sm text-indigo-600">{mensagem}</p>
-      )}
+      </div>
     </div>
   );
 };
