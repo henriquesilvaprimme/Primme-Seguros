@@ -11,7 +11,26 @@ const CriarLead = ({ adicionarLead }) => {
 
   const navigate = useNavigate();
 
-  const handleCriar = async () => {
+  const criarLeadFunc = async (lead) => {
+    try {
+      await fetch(
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify(lead),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Erro ao enviar lead:', error);
+      alert('Erro ao criar lead. Tente novamente.');
+    }
+  };
+
+  const handleCriar = () => {
     if (
       !nome ||
       !modeloVeiculo ||
@@ -35,25 +54,14 @@ const CriarLead = ({ adicionarLead }) => {
       data: new Date().toISOString().split('T')[0], // formato YYYY-MM-DD
     };
 
-    try {
-      await fetch(
-        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
-        {
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify(novoLead),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+    // Aqui chamamos a função que envia para o Sheets
+    criarLeadFunc(novoLead);
 
-      adicionarLead(novoLead);
-      navigate('/leads');
-    } catch (error) {
-      console.error('Erro ao enviar lead:', error);
-      alert('Erro ao criar lead. Tente novamente.');
-    }
+    // Atualiza o estado local
+    adicionarLead(novoLead);
+
+    // Navega para a listagem de leads
+    navigate('/leads');
   };
 
   return (
