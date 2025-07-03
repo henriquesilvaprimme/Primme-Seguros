@@ -32,7 +32,7 @@ const App = () => {
     img.onload = () => setBackgroundLoaded(true);
   }, []);
 
-  // INÍCIO - sincronização leads via Google Sheets
+  // sincronização leads via Google Sheets
   const [leads, setLeads] = useState([]);
   const [leadSelecionado, setLeadSelecionado] = useState(null);
 
@@ -85,7 +85,7 @@ const App = () => {
 
     return () => clearInterval(interval);
   }, [leadSelecionado]);
-  // FIM - sincronização leads
+  // fim sincronização leads
 
   const fetchLeadsFechadosFromSheet = async () => {
     try {
@@ -152,6 +152,14 @@ const App = () => {
   const adicionarUsuario = (usuario) => {
     setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
   };
+
+  // Função para adicionar Lead localmente
+  const adicionarLead = (lead) => {
+    setLeads((prev) => [...prev, lead]);
+  };
+
+  // Funções de atualizar status, seguradora, etc... (sem alterações)
+  // Copie todas as funções do seu código original para manter funcionalidade
 
   const atualizarStatusLead = (id, novoStatus, phone) => {
     setLeads((prev) =>
@@ -498,8 +506,8 @@ const App = () => {
                 path="/criar-usuario"
                 element={<CriarUsuario adicionarUsuario={adicionarUsuario} />}
               />
-              {/* Rota criada para Criar Lead */}
-              <Route path="/criar-lead" element={<CriarLead fetchLeadsFromSheet={fetchLeadsFromSheet} />} />
+              {/* Rota para Criar Lead, passando adicionarLead */}
+              <Route path="/criar-lead" element={<CriarLead adicionarLead={adicionarLead} />} />
             </>
           )}
           <Route
