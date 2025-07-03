@@ -27,6 +27,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     setLoading(true);
     setMensagem(null);
 
+    // Monta o objeto lead com as colunas da planilha (normalizadas)
     const lead = {
       id: gerarId(),
       name: form.name,
@@ -36,25 +37,20 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       phone: form.phone,
       insurancetype: form.insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsável: '',
+      responsável: '', // se quiser, preencha com usuário logado
       status: '',
       editado: '',
     };
 
-    // Monta os dados no formato URL encoded para evitar preflight
-    const params = new URLSearchParams();
-    params.append('action', 'salvarLead');
-    params.append('lead', JSON.stringify(lead));
-
     try {
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: params,
-        // não define headers para evitar preflight
+        mode: 'no-cors', // ESSENCIAL para evitar bloqueio CORS
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'salvarLead', lead }),
       });
 
-      if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
-
+      // Como usamos no-cors, não conseguimos saber se deu certo pela resposta
       setMensagem('Lead criado com sucesso!');
       setForm({
         name: '',
@@ -64,9 +60,10 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         phone: '',
         insuranceType: '',
       });
+      // Recarrega lista, se a função foi passada como prop
       fetchLeadsFromSheet?.();
     } catch (err) {
-      setMensagem(err.message);
+      setMensagem('Erro ao salvar lead.');
     } finally {
       setLoading(false);
     }
