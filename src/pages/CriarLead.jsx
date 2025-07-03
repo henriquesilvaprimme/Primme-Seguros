@@ -26,21 +26,18 @@ const CriarLead = () => {
       data: new Date().toLocaleDateString('pt-BR'),
     };
 
-    salvarLeadGAS(novoLead);
+    salvarLeadNoSheets(novoLead);
   };
 
-  const salvarLeadGAS = async (lead) => {
+  const salvarLeadNoSheets = async (lead) => {
     try {
-      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec', {
+      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead', {
         method: 'POST',
         mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'salvarLead',
-          lead,
-        }),
+        body: JSON.stringify(lead), // ✅ sem action nem lead
       });
 
       setMensagem('✅ Lead criado com sucesso!');
