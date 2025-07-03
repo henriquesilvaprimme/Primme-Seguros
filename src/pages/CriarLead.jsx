@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 
-/** URL pública do seu Apps Script */
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
-/** Gera um ID único: timestamp + número aleatório */
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
 export default function CriarLead({ fetchLeadsFromSheet }) {
@@ -27,7 +25,6 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
     setLoading(true);
     setMensagem(null);
 
-    // Monta o objeto lead com as colunas da planilha (normalizadas)
     const lead = {
       id: gerarId(),
       name: form.name,
@@ -37,22 +34,21 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
       phone: form.phone,
       insurancetype: form.insurancetype,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsavel: '', // pode preencher se desejar
+      responsavel: '',
       status: '',
       editado: '',
-      origem: 'Leads', // importante para o Apps Script saber a aba
+      origem: 'Leads',
     };
 
     try {
-      const res = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'salvarLead', lead }),
-        // NÃO incluir headers nem modo no-cors
+        mode: 'no-cors', // <=== aqui está o que pediu
       });
 
-      if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
-
-      setMensagem('Lead criado com sucesso!');
+      // Como com no-cors não tem resposta, assumimos sucesso
+      setMensagem('Lead criado (envio feito, sem confirmação).');
       setForm({
         name: '',
         vehiclemodel: '',
@@ -61,9 +57,10 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
         phone: '',
         insurancetype: '',
       });
+
       fetchLeadsFromSheet?.();
     } catch (err) {
-      setMensagem(err.message);
+      setMensagem('Erro ao salvar lead: ' + err.message);
     } finally {
       setLoading(false);
     }
