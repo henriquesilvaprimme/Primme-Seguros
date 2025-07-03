@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, BrowserRouter as Router } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -9,9 +8,9 @@ import LeadsFechados from './LeadsFechados';
 import LeadsPerdidos from './LeadsPerdidos';
 import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
+import CriarLead from './pages/CriarLead';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
-import CriarLead from './pages/CriarLead';
 
 //const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeZteouyVWzrCvgHHQttx-5Bekgs_k-5EguO9Sn2p-XFrivFg9S7_gGKLdoDfCa08/exec';
 
