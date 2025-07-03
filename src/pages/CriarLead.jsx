@@ -31,7 +31,7 @@ export default function CriarLead() {
     if (!lead.id) {
       const newId = gerarId();
       setLead((prev) => ({ ...prev, id: newId }));
-      lead.id = newId; // Atualiza no objeto antes do envio
+      lead.id = newId; // Atualiza antes de enviar
     }
 
     try {
@@ -46,8 +46,9 @@ export default function CriarLead() {
           }),
         }
       );
-      // Com no-cors, não dá para ler a resposta, então damos mensagem padrão:
-      setMessage("Lead enviado! (Não é possível confirmar sucesso por causa do no-cors)");
+      setMessage(
+        "Lead enviado! (Por usar no-cors, não é possível confirmar resposta do servidor)"
+      );
     } catch (error) {
       setMessage("Erro ao enviar lead: " + error.message);
     }
@@ -57,8 +58,6 @@ export default function CriarLead() {
     e.preventDefault();
     setMessage("");
     salvarLead();
-
-    // Resetar formulário independentemente da resposta, pois não temos retorno:
     setLead({
       id: "",
       name: "",
