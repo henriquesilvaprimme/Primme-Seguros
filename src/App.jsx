@@ -216,7 +216,10 @@ const App = () => {
   const adicionarUsuario = (usuario) => {
     setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
   };
-
+// coloque logo depois de `adicionarUsuario`
+const adicionarLead = (lead) => {
+  setLeads((prev) => [...prev, { ...lead }]);
+};
 
 
   const atualizarStatusLeadAntigo = (id, novoStatus, phone) => {
