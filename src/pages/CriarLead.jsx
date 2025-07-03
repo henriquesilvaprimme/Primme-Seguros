@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 
-const CriarLead = () => {
+// Mesma URL usada no Usuario.jsx
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+
+// Função para gerar ID aleatório
+const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+
+const CriarLead = ({ fetchLeadsFromSheet }) => {
   const [form, setForm] = useState({
     name: '',
     vehicleModel: '',
@@ -9,140 +15,125 @@ const CriarLead = () => {
     phone: '',
     insuranceType: '',
   });
-
-  const [mensagem, setMensagem] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mensagem, setMensagem] = useState(null);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMensagem('');
+    setMensagem(null);
 
-    const novoLead = {
-      id: crypto.randomUUID(),
+    const lead = {
+      id: gerarId(),
       name: form.name,
       vehiclemodel: form.vehicleModel,
       vehicleyearmodel: form.vehicleYearModel,
       city: form.city,
       phone: form.phone,
       insurancetype: form.insuranceType,
-      data: new Date().toISOString(),
-      responsavel: '',
+      data: new Date().toLocaleDateString('pt-BR'),
+      responsável: '',
       status: '',
       editado: '',
     };
 
     try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=salvar_lead',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ lead: novoLead }),
-        }
-      );
+      await fetch(SCRIPT_URL + '?v=salvar_lead', {
+        method: 'POST',
+        mode: 'no-cors', // ESSENCIAL para evitar erro de CORS
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'salvar_lead', lead }),
+      });
 
-      const texto = await response.text();
-
-      if (texto.includes('ok') || texto.includes('adicionado')) {
-        setMensagem('✅ Lead criado com sucesso!');
-        setForm({
-          name: '',
-          vehicleModel: '',
-          vehicleYearModel: '',
-          city: '',
-          phone: '',
-          insuranceType: '',
-        });
-      } else {
-        setMensagem('❌ Erro ao salvar o lead: ' + texto);
-      }
-    } catch (error) {
-      console.error(error);
-      setMensagem('❌ Erro de conexão ao salvar o lead.');
+      setMensagem('Lead criado com sucesso!');
+      setForm({
+        name: '',
+        vehicleModel: '',
+        vehicleYearModel: '',
+        city: '',
+        phone: '',
+        insuranceType: '',
+      });
+      fetchLeadsFromSheet?.();
+    } catch (err) {
+      setMensagem('Erro ao criar lead.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-blue-700">Criar Novo Lead</h2>
+    <div className="p-6">
+      <h2 className="text-3xl font-bold mb-6 text-indigo-700">Criar Lead</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
         <input
-          type="text"
+          required
           name="name"
           placeholder="Nome"
           value={form.name}
           onChange={handleChange}
-          required
-          className="w-full p-2 border rounded"
+          className="w-full border rounded px-3 py-2"
         />
         <input
-          type="text"
+          required
           name="vehicleModel"
-          placeholder="Modelo do Veículo"
+          placeholder="Modelo do veículo"
           value={form.vehicleModel}
           onChange={handleChange}
-          required
-          className="w-full p-2 border rounded"
+          className="w-full border rounded px-3 py-2"
         />
         <input
-          type="text"
+          required
           name="vehicleYearModel"
           placeholder="Ano/Modelo"
           value={form.vehicleYearModel}
           onChange={handleChange}
-          required
-          className="w-full p-2 border rounded"
+          className="w-full border rounded px-3 py-2"
         />
         <input
-          type="text"
+          required
           name="city"
           placeholder="Cidade"
           value={form.city}
           onChange={handleChange}
-          required
-          className="w-full p-2 border rounded"
+          className="w-full border rounded px-3 py-2"
         />
         <input
-          type="text"
+          required
           name="phone"
           placeholder="Telefone"
           value={form.phone}
           onChange={handleChange}
-          required
-          className="w-full p-2 border rounded"
+          className="w-full border rounded px-3 py-2"
         />
         <input
-          type="text"
+          required
           name="insuranceType"
-          placeholder="Tipo de Seguro"
+          placeholder="Tipo de seguro (Auto, Moto…)"
           value={form.insuranceType}
           onChange={handleChange}
-          required
-          className="w-full p-2 border rounded"
+          className="w-full border rounded px-3 py-2"
         />
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition ${
+            loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
         >
-          {loading ? 'Salvando...' : 'Criar Lead'}
+          {loading ? 'Salvando…' : 'Criar Lead'}
         </button>
       </form>
 
       {mensagem && (
-        <p className="mt-4 text-center text-sm text-gray-800">{mensagem}</p>
+        <p className="mt-4 text-center text-sm text-indigo-600">{mensagem}</p>
       )}
     </div>
   );
