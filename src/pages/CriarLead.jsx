@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 
+/** URL pública do seu Apps Script */
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
+/** Gera um ID simples: timestamp + número aleatório */
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
-export default function CriarLead({ fetchLeadsFromSheet }) {
+const CriarLead = ({ fetchLeadsFromSheet }) => {
   const [form, setForm] = useState({
     name: '',
-    vehiclemodel: '',
-    vehicleyearmodel: '',
+    vehicleModel: '',
+    vehicleYearModel: '',
     city: '',
     phone: '',
-    insurancetype: '',
+    insuranceType: '',
   });
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState(null);
@@ -28,39 +30,40 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
     const lead = {
       id: gerarId(),
       name: form.name,
-      vehiclemodel: form.vehiclemodel,
-      vehicleyearmodel: form.vehicleyearmodel,
+      vehiclemodel: form.vehicleModel,
+      vehicleyearmodel: form.vehicleYearModel,
       city: form.city,
       phone: form.phone,
-      insurancetype: form.insurancetype,
+      insurancetype: form.insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsavel: '',
+      responsável: '', // pode ajustar conforme sua necessidade
       status: '',
       editado: '',
-      origem: 'Leads',
     };
 
     try {
-      await fetch(SCRIPT_URL, {
+      const res = await fetch(SCRIPT_URL, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'salvarLead', lead }),
-        mode: 'no-cors', // <=== aqui está o que pediu
       });
 
-      // Como com no-cors não tem resposta, assumimos sucesso
-      setMensagem('Lead criado (envio feito, sem confirmação).');
+      if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
+
+      setMensagem('Lead criado com sucesso!');
       setForm({
         name: '',
-        vehiclemodel: '',
-        vehicleyearmodel: '',
+        vehicleModel: '',
+        vehicleYearModel: '',
         city: '',
         phone: '',
-        insurancetype: '',
+        insuranceType: '',
       });
 
+      // Se for passado, chama função para recarregar leads
       fetchLeadsFromSheet?.();
     } catch (err) {
-      setMensagem('Erro ao salvar lead: ' + err.message);
+      setMensagem(err.message);
     } finally {
       setLoading(false);
     }
@@ -81,17 +84,17 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
         />
         <input
           required
-          name="vehiclemodel"
+          name="vehicleModel"
           placeholder="Modelo do veículo"
-          value={form.vehiclemodel}
+          value={form.vehicleModel}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
         />
         <input
           required
-          name="vehicleyearmodel"
+          name="vehicleYearModel"
           placeholder="Ano/Modelo"
-          value={form.vehicleyearmodel}
+          value={form.vehicleYearModel}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
         />
@@ -113,9 +116,9 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
         />
         <input
           required
-          name="insurancetype"
-          placeholder="Tipo de seguro (Auto, Moto…)"
-          value={form.insurancetype}
+          name="insuranceType"
+          placeholder="Tipo de seguro (Auto, Moto...)"
+          value={form.insuranceType}
           onChange={handleChange}
           className="w-full border rounded px-3 py-2"
         />
@@ -136,4 +139,6 @@ export default function CriarLead({ fetchLeadsFromSheet }) {
       )}
     </div>
   );
-}
+};
+
+export default CriarLead;
