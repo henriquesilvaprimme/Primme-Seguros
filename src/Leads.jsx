@@ -7,6 +7,9 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
   const [selecionados, setSelecionados] = useState({}); // { [leadId]: userId }
   const [paginaAtual, setPaginaAtual] = useState(1);
 
+  // Estado para controle de atualização
+  const [atualizando, setAtualizando] = useState(false);
+
   // Estados para filtro por data (mes e ano) - INICIAM LIMPOS
   const [dataInput, setDataInput] = useState('');
   const [filtroData, setFiltroData] = useState('');
@@ -15,19 +18,15 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
   const [nomeInput, setNomeInput] = useState('');
   const [filtroNome, setFiltroNome] = useState('');
 
-  // Buscar leads atualizados do Google Sheets
-  const buscarLeadsAtualizados = async () => {
+  // Função para atualizar leads com mensagem de carregamento
+  const handleAtualizar = async () => {
+    setAtualizando(true);
     try {
-      const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL);
-      if (response.ok) {
-        const dadosLeads = await response.json();
-        setLeadsState(dadosLeads);
-      } else {
-        console.error('Erro ao buscar leads:', response.statusText);
-      }
+      await fetchLeadsFromSheet();
     } catch (error) {
-      console.error('Erro ao buscar leads:', error);
+      console.error('Erro ao atualizar leads:', error);
     }
+    setAtualizando(false);
   };
 
   const leadsPorPagina = 10;
@@ -97,7 +96,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
   const paginaCorrigida = Math.min(paginaAtual, totalPaginas);
 
   const usuariosAtivos = usuarios.filter((u) => u.status === 'Ativo');
-  const isAdmin = usuarioLogado?.tipo == 'Admin';
+  const isAdmin = usuarioLogado?.tipo === 'Admin';
 
   const handleSelect = (leadId, userId) => {
     setSelecionados((prev) => ({
@@ -175,17 +174,19 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
           flexWrap: 'wrap',
         }}
       >
-       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ margin: 0 }}>Leads</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h1 style={{ margin: 0 }}>Leads</h1>
 
-            <button title='Clique para atualizar os dados' onClick={handleAtualizar}>
-        🔄
-      </button>
+          <button title='Clique para atualizar os dados' onClick={handleAtualizar}>
+            🔄
+          </button>
 
-      {atualizando && <span style={{ marginLeft: '10px' }}>Atualizando Página...</span>}
-    </div>
-  );
-};
+          {atualizando && (
+            <span style={{ marginLeft: '10px', fontWeight: 'bold' }}>
+              Atualizando Página...
+            </span>
+          )}
+        </div>
 
         {/* Filtro nome - centralizado */}
         <div
@@ -197,8 +198,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
             justifyContent: 'center',
             minWidth: '300px',
           }}
-        >  
-        
+        >
           <button
             onClick={aplicarFiltroNome}
             style={{
@@ -339,14 +339,14 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
                     </select>
                     <button
                       onClick={() => handleEnviar(lead.id)}
-                        style={{
-                          padding: '5px 12px',
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
+                      style={{
+                        padding: '5px 12px',
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
                     >
                       Enviar
                     </button>
