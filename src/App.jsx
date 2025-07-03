@@ -14,7 +14,7 @@ import CriarLead from './pages/CriarLead'; // import da nova página
 
 const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
 const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
-const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados'
+const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados';
 
 const App = () => {
   const navigate = useNavigate();
@@ -37,57 +37,44 @@ const App = () => {
   const [leadSelecionado, setLeadSelecionado] = useState(null);
 
   const fetchLeadsFromSheet = async () => {
-      try {
-        const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL );
-        const data = await response.json();
+    try {
+      const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL);
+      const data = await response.json();
 
-        console.log(data)
+      if (Array.isArray(data)) {
+        const sortedData = data.sort((a, b) => new Date(b.editado) - new Date(a.editado));
 
-        if (Array.isArray(data)) {
+        const formattedLeads = sortedData.map((item, index) => ({
+          id: item.id ? Number(item.id) : index + 1,
+          name: item.name || item.Name || '',
+          vehicleModel: item.vehiclemodel || '',
+          vehicleYearModel: item.vehicleyearmodel || '',
+          city: item.city || '',
+          phone: item.phone || item.Telefone || '',
+          insuranceType: item.insurancetype || '',
+          status: item.status || 'Selecione o status',
+          confirmado: item.confirmado === 'true' || item.confirmado === true,
+          insurer: item.insurer || '',
+          insurerConfirmed: item.insurerConfirmed === 'true' || item.insurerConfirmed === true,
+          usuarioId: item.usuarioId ? Number(item.usuarioId) : null,
+          premioLiquido: item.premioLiquido || '',
+          comissao: item.comissao || '',
+          parcelamento: item.parcelamento || '',
+          createdAt: item.data || new Date().toISOString(),
+          responsavel: item.responsavel || '',
+          editado: item.editado || ''
+        }));
 
-          const sortedData = data.sort((a, b) => {
-            const dateA = new Date(a.editado);
-            const dateB = new Date(b.editado);
-            return dateB - dateA;
-          });
-
-          const formattedLeads = sortedData.map((item, index) => ({
-            id: item.id ? Number(item.id) : index + 1,
-            name: item.name || item.Name || '',
-            vehicleModel: item.vehiclemodel || item.vehiclemodel || '',
-            vehicleYearModel: item.vehicleyearmodel || item.vehicleyearmodel || '',
-            city: item.city || '',
-            phone: item.phone || item.Telefone || '',
-            insuranceType: item.insurancetype || '',
-            status: item.status || 'Selecione o status',
-            confirmado: item.confirmado === 'true' || item.confirmado === true,
-            insurer: item.insurer || '',
-            insurerConfirmed: item.insurerConfirmed === 'true' || item.insurerConfirmed === true,
-            usuarioId: item.usuarioId ? Number(item.usuarioId) : null,
-            premioLiquido: item.premioLiquido || '',
-            comissao: item.comissao || '',
-            parcelamento: item.parcelamento || '',
-            createdAt: item.data || new Date().toISOString(),
-            responsavel: item.responsavel || '',
-            editado: item.editado || ''
-          }));
-
-          console.log(formattedLeads)
-
-          if (!leadSelecionado) {
-            setLeads(formattedLeads);
-          }
-        } else {
-          if (!leadSelecionado) {
-            setLeads([]);
-          }
-        }
-      } catch (error) {
         if (!leadSelecionado) {
-          setLeads([]);
+          setLeads(formattedLeads);
         }
+      } else {
+        if (!leadSelecionado) setLeads([]);
       }
-    };
+    } catch (error) {
+      if (!leadSelecionado) setLeads([]);
+    }
+  };
 
   useEffect(() => {
     fetchLeadsFromSheet();
@@ -102,7 +89,7 @@ const App = () => {
 
   const fetchLeadsFechadosFromSheet = async () => {
     try {
-      const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS)
+      const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS);
       const data = await response.json();
 
       setLeadsFechados(data);
@@ -164,24 +151,6 @@ const App = () => {
 
   const adicionarUsuario = (usuario) => {
     setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
-  };
-
-  const atualizarStatusLeadAntigo = (id, novoStatus, phone) => {
-    if (novoStatus == 'Fechado') {
-      setLeadsFechados((prev) => {
-        const atualizados = prev.map((leadsFechados) =>
-          leadsFechados.phone === phone ? { ...leadsFechados, Status: novoStatus, confirmado: true } : leadsFechados
-        );
-
-        return atualizados;
-      });
-    }
-
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
-      )
-    );
   };
 
   const atualizarStatusLead = (id, novoStatus, phone) => {
@@ -260,6 +229,8 @@ const App = () => {
 
   const confirmarSeguradoraLead = (id, premio, seguradora, comissao, parcelamento) => {
     const lead = leadsFechados.find((lead) => lead.ID == id);
+
+    if (!lead) return;
 
     lead.Seguradora = seguradora;
     lead.PremioLiquido = premio;
@@ -443,8 +414,8 @@ const App = () => {
             element={
               <Dashboard
                 leadsClosed={
-                  isAdmin 
-                    ? leadsFechados 
+                  isAdmin
+                    ? leadsFechados
                     : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
                 }
                 leads={
@@ -453,7 +424,6 @@ const App = () => {
                     : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
                 }
                 usuarioLogado={usuarioLogado}
-                
               />
             }
           />
@@ -478,7 +448,6 @@ const App = () => {
                 usuarios={usuarios}
                 onUpdateInsurer={atualizarSeguradoraLead}
                 onConfirmInsurer={confirmarSeguradoraLead}
-                onUpdateDetalhes={atualizarDetalhesLeadFechado}
                 fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
                 isAdmin={isAdmin}
                 ultimoFechadoId={ultimoFechadoId}
@@ -529,14 +498,9 @@ const App = () => {
                 path="/criar-usuario"
                 element={<CriarUsuario adicionarUsuario={adicionarUsuario} />}
               />
-              {/* Aqui está a nova rota criada para Criar Lead */}
-              <Route
-                path="/criar-lead"
-                element={<CriarLead />}
-              />
+              {/* Rota criada para Criar Lead */}
+              <Route path="/criar-lead" element={<CriarLead />} />
             </>
-          
-          <Route path="/criar-lead" element={<CriarLead />} />
           )}
           <Route
             path="/ranking"
