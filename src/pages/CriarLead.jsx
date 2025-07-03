@@ -11,27 +11,7 @@ const CriarLead = ({ adicionarLead }) => {
 
   const navigate = useNavigate();
 
-  const criarLeadFunc = async (lead) => {
-    try {
-      await fetch(
-        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
-        {
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify(lead),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return true; // sucesso no envio (assumido)
-    } catch (error) {
-      console.error('Erro ao enviar lead:', error);
-      return false; // falha no envio
-    }
-  };
-
-  const handleCriar = async () => {
+  const handleCriar = () => {
     if (
       !nome ||
       !modeloVeiculo ||
@@ -55,13 +35,29 @@ const CriarLead = ({ adicionarLead }) => {
       data: new Date().toISOString().split('T')[0],
     };
 
-    const enviado = await criarLeadFunc(novoLead);
+    criarLeadFunc(novoLead);
 
-    if (enviado) {
-      adicionarLead(novoLead);
-      navigate('/leads');
-    } else {
-      alert('Erro ao criar lead. Tente novamente.');
+    adicionarLead(novoLead);
+
+    navigate('/leads');
+  };
+
+  const criarLeadFunc = async (lead) => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify(lead),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      // Não há resposta legível com no-cors
+    } catch (error) {
+      console.error('Erro ao enviar lead:', error);
     }
   };
 
