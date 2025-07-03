@@ -535,7 +535,7 @@ const App = () => {
                 element={<CriarLead />}
               />
             </>
-          )}
+          
           <Route path="/criar-lead" element={<CriarLead />} />
           )}
           <Route
