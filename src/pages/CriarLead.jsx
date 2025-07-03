@@ -8,20 +8,18 @@ const CriarLead = () => {
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
-  const [data, setData] = useState(() => new Date().toISOString().split('T')[0]); // yyyy-mm-dd
+  const [data, setData] = useState('');
 
   const navigate = useNavigate();
 
-  const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
-
-  const handleCriarLead = async () => {
+  const handleCriar = () => {
     if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType || !data) {
-      alert('Por favor, preencha todos os campos.');
+      alert('Preencha todos os campos.');
       return;
     }
 
     const novoLead = {
-      id: Date.now(), // ID único com timestamp
+      id: Date.now(),
       name,
       vehicleModel,
       vehicleYearModel,
@@ -29,27 +27,33 @@ const CriarLead = () => {
       phone,
       insuranceType,
       data,
-      origem: 'Leads' // Para enviar para a aba correta no Google Sheets
+      origem: 'Leads', // importante para escolher a aba certa no Sheets
     };
 
-    try {
-      await fetch(GOOGLE_SHEETS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: 'salvarLead',
-          lead: novoLead
-        })
-      });
+    criarLeadFunc(novoLead);
 
-      alert('Lead criado com sucesso!');
-      navigate('/leads');
+    alert('Lead criado com sucesso!');
+    navigate('/leads');
+  };
+
+  const criarLeadFunc = async (lead) => {
+    try {
+      await fetch(
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'salvarLead',
+            lead,
+          }),
+        }
+      );
     } catch (error) {
-      console.error('Erro ao criar lead:', error);
-      alert('Erro ao criar lead. Tente novamente.');
+      console.error('Erro ao enviar lead:', error);
     }
   };
 
@@ -62,7 +66,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -72,7 +76,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={vehicleModel}
-          onChange={e => setVehicleModel(e.target.value)}
+          onChange={(e) => setVehicleModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -82,7 +86,7 @@ const CriarLead = () => {
         <input
           type="number"
           value={vehicleYearModel}
-          onChange={e => setVehicleYearModel(e.target.value)}
+          onChange={(e) => setVehicleYearModel(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           min="1900"
           max={new Date().getFullYear() + 1}
@@ -94,7 +98,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={city}
-          onChange={e => setCity(e.target.value)}
+          onChange={(e) => setCity(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
@@ -104,7 +108,7 @@ const CriarLead = () => {
         <input
           type="tel"
           value={phone}
-          onChange={e => setPhone(e.target.value)}
+          onChange={(e) => setPhone(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           placeholder="(99) 99999-9999"
         />
@@ -115,7 +119,7 @@ const CriarLead = () => {
         <input
           type="text"
           value={insuranceType}
-          onChange={e => setInsuranceType(e.target.value)}
+          onChange={(e) => setInsuranceType(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           placeholder="Ex: Automóvel, Moto, Vida..."
         />
@@ -126,14 +130,14 @@ const CriarLead = () => {
         <input
           type="date"
           value={data}
-          onChange={e => setData(e.target.value)}
+          onChange={(e) => setData(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
       <div className="flex justify-end">
         <button
-          onClick={handleCriarLead}
+          onClick={handleCriar}
           className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
         >
           Criar Lead
