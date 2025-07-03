@@ -1,24 +1,20 @@
-// src/components/CriarLead.jsx
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
 
-/** URL pública do seu Apps Script */
+/** URL pública do seu Apps Script */
 const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec";
+  'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
 /** Gera um ID simples: timestamp + número aleatório */
 const gerarId = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
-export default function CriarLead({ onSucesso }) {
+const CriarLead = ({ fetchLeadsFromSheet }) => {
   const [form, setForm] = useState({
-    name: "",
-    vehicleModel: "",
-    vehicleYearModel: "",
-    city: "",
-    phone: "",
-    insuranceType: "",
+    name: '',
+    vehicleModel: '',
+    vehicleYearModel: '',
+    city: '',
+    phone: '',
+    insuranceType: '',
   });
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState(null);
@@ -29,10 +25,9 @@ export default function CriarLead({ onSucesso }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setMensagem(null);
 
-    /** Monta o payload exatamente com os _headers_ da aba Leads.
-     *  Atenção: o Apps Script faz `toLowerCase()` e remove espaços,
-     *  então usamos as mesmas versões “normalizadas” das colunas. */
+    // Monta o objeto lead com as colunas da planilha (normalizadas)
     const lead = {
       id: gerarId(),
       name: form.name,
@@ -41,34 +36,33 @@ export default function CriarLead({ onSucesso }) {
       city: form.city,
       phone: form.phone,
       insurancetype: form.insuranceType,
-      data: new Date().toLocaleDateString("pt-BR"),
-      responsável: "",   // preencha com usuário logado, se quiser
-      status: "",        // deixe vazio ou escolha um padrão
-      editado: "",
+      data: new Date().toLocaleDateString('pt-BR'),
+      responsável: '', // se quiser, preencha com usuário logado
+      status: '',
+      editado: '',
     };
 
     try {
       const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "salvarLead", lead }),
-        // Caso você ainda enfrente pre‑flight CORS, teste:
-        // mode: "no-cors"
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'salvarLead', lead }),
+        // Se ainda houver erro de pre-flight, teste mode: 'no-cors'
       });
 
-      if (!res.ok && res.type !== "opaque")
-        throw new Error("Erro ao salvar lead");
+      if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
 
-      setMensagem("Lead criado com sucesso!");
+      setMensagem('Lead criado com sucesso!');
       setForm({
-        name: "",
-        vehicleModel: "",
-        vehicleYearModel: "",
-        city: "",
-        phone: "",
-        insuranceType: "",
+        name: '',
+        vehicleModel: '',
+        vehicleYearModel: '',
+        city: '',
+        phone: '',
+        insuranceType: '',
       });
-      onSucesso?.(); // recarrega lista, se o pai fornecer
+      // Recarrega lista, se a função foi passada como prop
+      fetchLeadsFromSheet?.();
     } catch (err) {
       setMensagem(err.message);
     } finally {
@@ -77,63 +71,75 @@ export default function CriarLead({ onSucesso }) {
   };
 
   return (
-    <Card className="max-w-xl mx-auto mt-8">
-      <CardContent className="p-6 space-y-5">
-        <h2 className="text-2xl font-bold text-indigo-700">Criar Lead</h2>
+    <div className="p-6">
+      <h2 className="text-3xl font-bold mb-6 text-indigo-700">Criar Lead</h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            required
-            name="name"
-            placeholder="Nome"
-            value={form.name}
-            onChange={handleChange}
-          />
-          <Input
-            required
-            name="vehicleModel"
-            placeholder="Modelo do veículo"
-            value={form.vehicleModel}
-            onChange={handleChange}
-          />
-          <Input
-            required
-            name="vehicleYearModel"
-            placeholder="Ano/Modelo"
-            value={form.vehicleYearModel}
-            onChange={handleChange}
-          />
-          <Input
-            required
-            name="city"
-            placeholder="Cidade"
-            value={form.city}
-            onChange={handleChange}
-          />
-          <Input
-            required
-            name="phone"
-            placeholder="Telefone"
-            value={form.phone}
-            onChange={handleChange}
-          />
-          <Input
-            required
-            name="insuranceType"
-            placeholder="Tipo de seguro (Novo, Renovação, Indicação…)"
-            value={form.insuranceType}
-            onChange={handleChange}
-          />
+      <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
+        <input
+          required
+          name="name"
+          placeholder="Nome"
+          value={form.name}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+        <input
+          required
+          name="vehicleModel"
+          placeholder="Modelo do veículo"
+          value={form.vehicleModel}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+        <input
+          required
+          name="vehicleYearModel"
+          placeholder="Ano/Modelo"
+          value={form.vehicleYearModel}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+        <input
+          required
+          name="city"
+          placeholder="Cidade"
+          value={form.city}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+        <input
+          required
+          name="phone"
+          placeholder="Telefone"
+          value={form.phone}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+        <input
+          required
+          name="insuranceType"
+          placeholder="Tipo de seguro (Auto, Moto…)"
+          value={form.insuranceType}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Salvando…" : "Criar Lead"}
-          </Button>
-        </form>
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition ${
+            loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
+        >
+          {loading ? 'Salvando…' : 'Criar Lead'}
+        </button>
+      </form>
 
-        {mensagem && (
-          <p className="text-center text-sm text-indigo-600">{mensagem}</p>
-        )}
-      </CardContent>
-    </Card>
+      {mensagem && (
+        <p className="mt-4 text-center text-sm text-indigo-600">{mensagem}</p>
+      )}
+    </div>
   );
-}
+};
+
+export default CriarLead;
