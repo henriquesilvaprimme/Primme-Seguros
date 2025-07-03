@@ -24,13 +24,14 @@ const CriarLead = ({ adicionarLead }) => {
           },
         }
       );
+      return true; // sucesso no envio (assumido)
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
-      alert('Erro ao criar lead. Tente novamente.');
+      return false; // falha no envio
     }
   };
 
-  const handleCriar = () => {
+  const handleCriar = async () => {
     if (
       !nome ||
       !modeloVeiculo ||
@@ -51,17 +52,17 @@ const CriarLead = ({ adicionarLead }) => {
       cidade,
       telefone,
       tipoSeguro,
-      data: new Date().toISOString().split('T')[0], // formato YYYY-MM-DD
+      data: new Date().toISOString().split('T')[0],
     };
 
-    // Aqui chamamos a função que envia para o Sheets
-    criarLeadFunc(novoLead);
+    const enviado = await criarLeadFunc(novoLead);
 
-    // Atualiza o estado local
-    adicionarLead(novoLead);
-
-    // Navega para a listagem de leads
-    navigate('/leads');
+    if (enviado) {
+      adicionarLead(novoLead);
+      navigate('/leads');
+    } else {
+      alert('Erro ao criar lead. Tente novamente.');
+    }
   };
 
   return (
