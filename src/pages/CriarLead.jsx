@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const CriarLead = () => {
   const [name, setName] = useState('');
@@ -8,12 +7,11 @@ const CriarLead = () => {
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
-
-  const navigate = useNavigate();
+  const [mensagem, setMensagem] = useState('');
 
   const handleCriarLead = () => {
     if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType) {
-      alert('Preencha todos os campos.');
+      setMensagem('❌ Preencha todos os campos.');
       return;
     }
 
@@ -32,26 +30,35 @@ const CriarLead = () => {
     };
 
     salvarLead(novoLead);
-    navigate('/leads'); // Altere conforme a sua rota
   };
 
   const salvarLead = async (payload) => {
-  try {
-    await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec', {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    alert('✅ Lead criado com sucesso!');
-  } catch (error) {
-    console.error('Erro ao salvar lead:', error);
-    alert('❌ Erro ao criar o lead. Verifique a conexão.');
-  }
-};
+      setMensagem('✅ Lead criado com sucesso!');
+      limparCampos();
+    } catch (error) {
+      console.error('Erro ao salvar lead:', error);
+      setMensagem('❌ Erro ao criar o lead. Verifique sua conexão.');
+    }
+  };
+
+  const limparCampos = () => {
+    setName('');
+    setVehicleModel('');
+    setVehicleYearModel('');
+    setCity('');
+    setPhone('');
+    setInsuranceType('');
+  };
 
   return (
     <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
@@ -113,6 +120,12 @@ const CriarLead = () => {
           Criar Lead
         </button>
       </div>
+
+      {mensagem && (
+        <div className="mt-4 text-center text-green-700 font-semibold">
+          {mensagem}
+        </div>
+      )}
     </div>
   );
 };
