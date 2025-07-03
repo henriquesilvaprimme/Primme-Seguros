@@ -27,7 +27,6 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     setLoading(true);
     setMensagem(null);
 
-    // Monta o objeto lead com as colunas da planilha (normalizadas)
     const lead = {
       id: gerarId(),
       name: form.name,
@@ -37,7 +36,7 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
       phone: form.phone,
       insurancetype: form.insuranceType,
       data: new Date().toLocaleDateString('pt-BR'),
-      responsável: '', // se quiser, preencha com usuário logado
+      responsável: '',
       status: '',
       editado: '',
     };
@@ -45,9 +44,8 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
     try {
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'salvarLead', lead }),
-        // Se ainda houver erro de pre-flight, teste mode: 'no-cors'
+        // Aqui removemos o header Content-Type para evitar preflight
       });
 
       if (!res.ok && res.type !== 'opaque') throw new Error('Erro ao salvar lead.');
@@ -61,7 +59,6 @@ const CriarLead = ({ fetchLeadsFromSheet }) => {
         phone: '',
         insuranceType: '',
       });
-      // Recarrega lista, se a função foi passada como prop
       fetchLeadsFromSheet?.();
     } catch (err) {
       setMensagem(err.message);
