@@ -10,6 +10,7 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
+import CriarLead from './pages/CriarLead'; // ou ajuste o caminho conforme onde está seu arquivo
 
 // URLs Google Sheets Apps Script
 const GOOGLE_SHEETS_SCRIPT_URL =
