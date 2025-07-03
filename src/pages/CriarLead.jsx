@@ -29,8 +29,9 @@ export default function CriarLead() {
 
   async function salvarLead() {
     if (!lead.id) {
-      lead.id = gerarId();
-      setLead((prev) => ({ ...prev, id: lead.id }));
+      const newId = gerarId();
+      setLead((prev) => ({ ...prev, id: newId }));
+      lead.id = newId; // Atualiza no objeto antes do envio
     }
 
     const response = await fetch(
@@ -84,68 +85,93 @@ export default function CriarLead() {
   }
 
   return (
-    <div style={{ maxWidth: 500, margin: "auto", padding: 20, fontFamily: "Arial, sans-serif" }}>
-      <h2 style={{ textAlign: "center" }}>Criar Lead</h2>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <input
-          name="name"
-          placeholder="Nome"
-          value={lead.name}
-          onChange={handleChange}
-          required
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <input
-          name="vehiclemodel"
-          placeholder="Modelo do veículo"
-          value={lead.vehiclemodel}
-          onChange={handleChange}
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <input
-          name="vehicleyearmodel"
-          placeholder="Ano do veículo"
-          value={lead.vehicleyearmodel}
-          onChange={handleChange}
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <input
-          name="city"
-          placeholder="Cidade"
-          value={lead.city}
-          onChange={handleChange}
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <input
-          name="phone"
-          placeholder="Telefone"
-          value={lead.phone}
-          onChange={handleChange}
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <input
-          name="insurancetype"
-          placeholder="Tipo de seguro"
-          value={lead.insurancetype}
-          onChange={handleChange}
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <input
-          name="data"
-          placeholder="Data"
-          type="date"
-          value={lead.data}
-          onChange={handleChange}
-          style={{ padding: 8, fontSize: 16 }}
-        />
+    <div className="container-criar-lead" style={{ maxWidth: 400, margin: "auto", padding: 20 }}>
+      <h2>Criar Lead</h2>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <label>
+          Nome:
+          <input
+            type="text"
+            name="name"
+            value={lead.name}
+            onChange={handleChange}
+            required
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
+
+        <label>
+          Modelo do Veículo:
+          <input
+            type="text"
+            name="vehiclemodel"
+            value={lead.vehiclemodel}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
+
+        <label>
+          Ano do Veículo:
+          <input
+            type="text"
+            name="vehicleyearmodel"
+            value={lead.vehicleyearmodel}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
+
+        <label>
+          Cidade:
+          <input
+            type="text"
+            name="city"
+            value={lead.city}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
+
+        <label>
+          Telefone:
+          <input
+            type="text"
+            name="phone"
+            value={lead.phone}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
+
+        <label>
+          Tipo de Seguro:
+          <input
+            type="text"
+            name="insurancetype"
+            value={lead.insurancetype}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
+
+        <label>
+          Data:
+          <input
+            type="date"
+            name="data"
+            value={lead.data}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+        </label>
 
         <button
           type="submit"
           style={{
-            padding: 10,
-            backgroundColor: "#007bff",
+            padding: "10px",
+            backgroundColor: "#0070f3",
             color: "white",
-            fontSize: 16,
             border: "none",
             borderRadius: 4,
             cursor: "pointer",
@@ -154,17 +180,8 @@ export default function CriarLead() {
           Salvar Lead
         </button>
       </form>
-      {message && (
-        <p
-          style={{
-            marginTop: 16,
-            textAlign: "center",
-            color: message.toLowerCase().includes("erro") ? "red" : "green",
-          }}
-        >
-          {message}
-        </p>
-      )}
+
+      {message && <p style={{ marginTop: 15 }}>{message}</p>}
     </div>
   );
 }
