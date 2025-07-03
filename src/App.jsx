@@ -10,7 +10,7 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
-import CriarLead from './pages/CriarLead'; // ou ajuste o caminho conforme onde está seu arquivo
+import CriarLead from './pages/CriarLead'; // ⬅️ ADICIONADO
 
 // URLs Google Sheets Apps Script
 const GOOGLE_SHEETS_SCRIPT_URL =
@@ -150,7 +150,7 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Funções principais do sistema (copiadas exatamente conforme o seu código original):
+  // Funções principais do sistema:
 
   const [ultimoFechadoId, setUltimoFechadoId] = useState(null);
 
@@ -465,45 +465,48 @@ const App = () => {
               />
             }
           />
-          <Route
+                    <Route
             path="/buscar-lead"
             element={
               <BuscarLead
-                leads={leads}
-                fetchLeadsFromSheet={fetchLeadsFromSheet}
-                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                usuarios={usuarios}
+                onUpdateStatus={atualizarStatusLead}
+                transferirLead={transferirLead}
+                isAdmin={isAdmin}
               />
             }
           />
-          {isAdmin && (
-            <>
-              <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
-              <Route
-                path="/usuarios"
-                element={
-                  <Usuarios
-                    leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
-                    usuarios={usuarios}
-                    fetchLeadsFromSheet={fetchLeadsFromSheet}
-                    fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
-                    atualizarStatusUsuario={atualizarStatusUsuario}
-                  />
-                }
+          <Route
+            path="/usuarios"
+            element={
+              <Usuarios
+                usuarios={usuarios}
+                adicionarUsuario={adicionarUsuario}
+                atualizarStatusUsuario={atualizarStatusUsuario}
+                isAdmin={isAdmin}
               />
-            </>
-          )}
+            }
+          />
+          <Route
+            path="/criar-usuario"
+            element={
+              <CriarUsuario
+                adicionarUsuario={adicionarUsuario}
+                usuarios={usuarios}
+              />
+            }
+          />
           <Route
             path="/ranking"
-            element={
-              <Ranking
-                usuarios={usuarios}
-                fetchLeadsFromSheet={fetchLeadsFromSheet}
-                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
-                leads={leads}
-              />
-            }
+            element={<Ranking leadsFechados={leadsFechados} usuarios={usuarios} isAdmin={isAdmin} />}
           />
-          <Route path="*" element={<h1 style={{ padding: 20 }}>Página não encontrada</h1>} />
+
+          {/* ROTA CRIAR LEAD ADICIONADA */}
+          <Route path="/criar-lead" element={<CriarLead />} />
+
+          {/* Redireciona para dashboard para qualquer outra rota */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
     </div>
