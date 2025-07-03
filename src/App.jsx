@@ -606,7 +606,7 @@ const adicionarLead = (lead) => {
                 />} />
           {isAdmin && (
   <>
-    <Route path="/criar-lead" element={<CriarLead />} />
+    <Route path="/criar-lead" element={<CriarLead adicionarLead={adicionarLead} />} />
     <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
     <Route
       path="/usuarios"
