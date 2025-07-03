@@ -16,23 +16,20 @@ const CriarLead = () => {
     }
 
     const novoLead = {
-      action: 'salvarLead',
-      lead: {
-        id: Date.now(),
-        name,
-        vehicleModel,
-        vehicleYearModel,
-        city,
-        phone,
-        insuranceType,
-        data: new Date().toLocaleDateString('pt-BR'),
-      },
+      id: Date.now(),
+      name,
+      vehicleModel,
+      vehicleYearModel,
+      city,
+      phone,
+      insuranceType,
+      data: new Date().toLocaleDateString('pt-BR'),
     };
 
-    salvarLead(novoLead);
+    salvarLeadGAS(novoLead);
   };
 
-  const salvarLead = async (payload) => {
+  const salvarLeadGAS = async (lead) => {
     try {
       await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec', {
         method: 'POST',
@@ -40,7 +37,10 @@ const CriarLead = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          action: 'salvarLead',
+          lead,
+        }),
       });
 
       setMensagem('✅ Lead criado com sucesso!');
