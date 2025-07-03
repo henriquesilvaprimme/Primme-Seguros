@@ -11,14 +11,14 @@ const CriarLead = () => {
 
   const navigate = useNavigate();
 
-  const handleCriar = async () => {
-    if (!name || !phone || !insuranceType) {
-      alert('Preencha os campos obrigatórios (Nome, Telefone, Tipo de Seguro).');
+  const handleCriar = () => {
+    if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType) {
+      alert('Preencha todos os campos.');
       return;
     }
 
     const novoLead = {
-      id: Date.now().toString(), // <--- ESSENCIAL
+      id: Date.now(), // ID único
       name,
       vehicleModel,
       vehicleYearModel,
@@ -27,25 +27,30 @@ const CriarLead = () => {
       insuranceType,
       status: 'Novo',
       confirmado: false,
-      responsavel: '',
       editado: new Date().toISOString(),
-      origem: 'Leads', // opcional
+      origem: 'Leads'
     };
 
-    try {
-      await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead', {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(novoLead),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+    criarLeadFunc(novoLead);
 
-      // Aguarda um tempo (se necessário) ou apenas redireciona
-      navigate('/leads');
+    navigate('/leads');
+  };
+
+  const criarLeadFunc = async (lead) => {
+    try {
+      await fetch(
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify(lead),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     } catch (error) {
-      console.error('Erro ao criar lead:', error);
+      console.error('Erro ao enviar lead:', error);
     }
   };
 
@@ -69,7 +74,7 @@ const CriarLead = () => {
           type="text"
           value={vehicleModel}
           onChange={(e) => setVehicleModel(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -79,7 +84,7 @@ const CriarLead = () => {
           type="text"
           value={vehicleYearModel}
           onChange={(e) => setVehicleYearModel(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -89,7 +94,7 @@ const CriarLead = () => {
           type="text"
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -99,7 +104,7 @@ const CriarLead = () => {
           type="text"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
@@ -109,7 +114,7 @@ const CriarLead = () => {
           type="text"
           value={insuranceType}
           onChange={(e) => setInsuranceType(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg"
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
 
