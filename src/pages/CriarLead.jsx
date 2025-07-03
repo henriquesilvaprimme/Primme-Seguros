@@ -120,7 +120,7 @@ export default function CriarLead({ onSucesso }) {
           <Input
             required
             name="insuranceType"
-            placeholder="Tipo de seguro (Auto, Moto…)"
+            placeholder="Tipo de seguro (Novo, Renovação, Indicação…)"
             value={form.insuranceType}
             onChange={handleChange}
           />
