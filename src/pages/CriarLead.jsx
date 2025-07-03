@@ -2,58 +2,70 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const CriarLead = ({ adicionarLead }) => {
+  // Campos do formulário
   const [name, setName] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYearModel, setVehicleYearModel] = useState('');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
-  const [data, setData] = useState('');
 
   const navigate = useNavigate();
 
+  // Validação e envio
   const handleCriar = () => {
-    if (!name || !vehicleModel || !vehicleYearModel || !city || !phone || !insuranceType || !data) {
-      alert('Por favor, preencha todos os campos.');
+    if (
+      !name ||
+      !vehicleModel ||
+      !vehicleYearModel ||
+      !city ||
+      !phone ||
+      !insuranceType
+    ) {
+      alert('Preencha todos os campos.');
       return;
     }
 
     const novoLead = {
-      id: Date.now(), // ID único baseado no timestamp
+      id: Date.now(), // ID único baseado em epoch
       name,
       vehicleModel,
       vehicleYearModel,
       city,
       phone,
       insuranceType,
-      data,
+      data: new Date().toISOString().split('T')[0], // YYYY-MM-DD
     };
 
     criarLeadFunc(novoLead);
+    adicionarLead(novoLead); // Atualiza estado local na plataforma
 
-    adicionarLead(novoLead);
-
-    navigate('/leads');
+    navigate('/leads'); // Redireciona para listagem de leads
   };
 
+  // Chamada ao Apps Script
   const criarLeadFunc = async (lead) => {
     try {
       await fetch(
         'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
         {
           method: 'POST',
-          mode: 'no-cors', // importante para evitar bloqueios CORS
+          mode: 'no-cors',
+          body: JSON.stringify(lead),
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(lead),
         }
       );
+      // Como estamos usando no‑cors, não há resposta legível aqui.
     } catch (error) {
       console.error('Erro ao enviar lead:', error);
     }
   };
 
+  /* ------------------------------------------------------------------ */
+  /* UI                                                                 */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
       <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
@@ -79,7 +91,7 @@ const CriarLead = ({ adicionarLead }) => {
       </div>
 
       <div>
-        <label className="block text-gray-700">Ano do Modelo do Veículo</label>
+        <label className="block text-gray-700">Ano/Modelo</label>
         <input
           type="text"
           value={vehicleYearModel}
@@ -101,7 +113,7 @@ const CriarLead = ({ adicionarLead }) => {
       <div>
         <label className="block text-gray-700">Telefone</label>
         <input
-          type="text"
+          type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -110,22 +122,17 @@ const CriarLead = ({ adicionarLead }) => {
 
       <div>
         <label className="block text-gray-700">Tipo de Seguro</label>
-        <input
-          type="text"
+        <select
           value={insuranceType}
           onChange={(e) => setInsuranceType(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Data</label>
-        <input
-          type="date"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
+          className="w-full mt-1 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+          <option value="">Selecione</option>
+          <option value="Auto">Auto</option>
+          <option value="Moto">Moto</option>
+          <option value="Caminhão">Caminhão</option>
+          <option value="Frota">Frota</option>
+        </select>
       </div>
 
       <div className="flex justify-end">
