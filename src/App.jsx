@@ -12,12 +12,9 @@ import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
 
 // Suas URLs para o Google Apps Script
-// Mantenha as URLs de GET separadas das de POST se elas tiverem sufixos diferentes (e.g., ?v=getLeads)
-const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=getLeads'; // URL para pegar leads
-const GOOGLE_SHEETS_USERS_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=pegar_usuario'; // URL para pegar usuários
-const GOOGLE_SHEETS_LEADS_FECHADOS_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=pegar_clientes_fechados'; // URL para pegar leads fechados
-
-// URL para POSTs de alteração de dados (se for a mesma, tudo bem)
+const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=getLeads';
+const GOOGLE_SHEETS_USERS_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=pegar_usuario';
+const GOOGLE_SHEETS_LEADS_FECHADOS_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=pegar_clientes_fechados';
 const GOOGLE_SHEETS_POST_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
 
 
@@ -31,16 +28,22 @@ const App = () => {
   const [leadsFechados, setLeadsFechados] = useState([]);
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
 
-  // Estados para leads e usuários
   const [leads, setLeads] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
-  const [leadSelecionado, setLeadSelecionado] = useState(null); // Usado para navegação e evitar refresh desnecessário
+  const [leadSelecionado, setLeadSelecionado] = useState(null);
 
   useEffect(() => {
     const img = new Image();
-    img.src = '/background.png'; // Certifique-se de que este caminho está correto para seu background
+    img.src = '/background.png';
     img.onload = () => setBackgroundLoaded(true);
   }, []);
+
+  // Helper function to safely parse dates
+  const parseDateSafely = (dateString) => {
+    if (!dateString) return new Date(0); // Return a valid but old date for sorting if value is empty/null
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? new Date(0) : date; // Check if date is valid
+  };
 
   // --- FUNÇÃO PARA BUSCAR LEADS PENDENTES ---
   const fetchLeadsFromSheet = async () => {
@@ -55,8 +58,10 @@ const App = () => {
 
       if (Array.isArray(data)) {
         const sortedData = [...data].sort((a, b) => {
-          const dateA = new Date(a.data || a.editado);
-          const dateB = new Date(b.data || b.editado);
+          // Use the safe parser for sorting dates
+          const dateA = parseDateSafely(a.editado || a.data); // Prefer 'editado' for recency, fallback to 'data'
+          const dateB = parseDateSafely(b.editado || b.data);
+
           return dateB.getTime() - dateA.getTime();
         });
 
@@ -76,9 +81,12 @@ const App = () => {
           premioLiquido: item.premioLiquido || '',
           comissao: item.comissao || '',
           parcelamento: item.parcelamento || '',
-          data: item.data || new Date().toISOString(),
+          // Ensure 'data' is always a valid ISO string.
+          // If item.data is invalid, parseDateSafely will return a valid Date object (Jan 1, 1970)
+          // and then toISOString() will work.
+          data: parseDateSafely(item.data).toISOString(),
           responsavel: item.responsavel || '',
-          editado: item.editado || ''
+          editado: parseDateSafely(item.editado).toISOString() // Also make sure 'editado' is safe
         }));
 
         if (!leadSelecionado) {
@@ -120,7 +128,12 @@ const App = () => {
       }
 
       if (Array.isArray(data)) {
-        const reversedFechados = [...data].reverse();
+        // Apply safe parsing to leadsFechados as well, if they have date fields that might be read
+        const formattedFechados = data.map(item => ({
+            ...item,
+            Data: parseDateSafely(item.Data).toISOString() // Assuming 'Data' is the date field
+        }));
+        const reversedFechados = [...formattedFechados].reverse();
         setLeadsFechados(reversedFechados);
       } else {
         setLeadsFechados([]);
@@ -184,13 +197,12 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const [ultimoFechadoId, setUltimoFechadoId] = useState(null); // Estado não usado para o propósito original, considerar remoção ou refatoração
+  const [ultimoFechadoId, setUltimoFechadoId] = useState(null);
 
   const adicionarUsuario = (usuario) => {
     setUsuarios((prev) => [...prev, { ...usuario, id: crypto.randomUUID() }]);
   };
 
-  // --- Lógica para "limpar" campos de um lead (usado internamente) ---
   const limparCamposLead = (lead) => ({
     ...lead,
     premioLiquido: "",
@@ -198,7 +210,6 @@ const App = () => {
     parcelamento: "",
   });
 
-  // --- Atualiza status do lead no estado local e envia para o Apps Script ---
   const atualizarStatusLead = async (id, novoStatus, phone) => {
     const leadToUpdate = leads.find((lead) => lead.phone === phone);
     if (!leadToUpdate) return;
@@ -226,7 +237,7 @@ const App = () => {
             city: leadToUpdate.city,
             phone: leadToUpdate.phone,
             insurer: leadToUpdate.insuranceType || '',
-            Data: leadToUpdate.data || new Date().toISOString(),
+            Data: parseDateSafely(leadToUpdate.data).toISOString(), // Ensure date is valid here too
             Responsavel: leadToUpdate.responsavel || '',
             Status: "Fechado",
             Seguradora: leadToUpdate.insurer || "",
@@ -263,25 +274,16 @@ const App = () => {
     }
   };
 
-  // --- Atualiza a seguradora de um lead (sem confirmar) ---
   const atualizarSeguradoraLead = (id, seguradora) => {
-    // Esta função deve atualizar a seguradora nos Leads normais,
-    // se o fluxo de negócio permitir que um lead não-fechado tenha seguradora.
-    // Se ela for apenas para leads fechados, talvez precise ajustar a lógica
-    // para LeadsFechados.
     setLeads((prev) =>
       prev.map((lead) =>
         lead.id === id
-          ? { ...lead, insurer: seguradora } // Removed limparCamposLead here, as it might not always be desired
+          ? { ...lead, insurer: seguradora }
           : lead
       )
     );
-    // Nota: Esta função não faz um POST para o Apps Script.
-    // Se você precisar que a atualização da seguradora seja persistida
-    // antes da confirmação, adicione a lógica de fetch aqui.
   };
 
-  // --- Confirma seguradora e detalhes do lead fechado e envia para o Apps Script ---
   const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
     const lead = leadsFechados.find((l) => l.ID == id);
     if (!lead) return;
@@ -317,7 +319,6 @@ const App = () => {
     }
   };
 
-  // --- Atualiza outros detalhes de um lead FECHADO (não a seguradora principal) ---
   const atualizarDetalhesLeadFechado = (id, campo, valor) => {
     setLeadsFechados((prev) =>
       prev.map((lead) =>
@@ -326,7 +327,6 @@ const App = () => {
     );
   };
 
-  // --- Transfere lead para um responsável e envia para o Apps Script ---
   const transferirLead = async (leadId, responsavelId) => {
     const leadToUpdate = leads.find((lead) => lead.id === leadId);
     if (!leadToUpdate) return;
@@ -373,7 +373,6 @@ const App = () => {
     }
   };
 
-  // --- Atualiza status/tipo do usuário e envia para o Apps Script ---
   const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
     const usuario = usuarios.find((u) => u.id === id);
     if (!usuario) return;
@@ -523,7 +522,7 @@ const App = () => {
               <LeadsFechados
                 leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)}
                 usuarios={usuarios}
-                onUpdateInsurer={atualizarSeguradoraLead} // <-- Esta prop está aqui, certificada!
+                onUpdateInsurer={atualizarSeguradoraLead}
                 onConfirmInsurer={confirmarSeguradoraLead}
                 onUpdateDetalhes={atualizarDetalhesLeadFechado}
                 fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
