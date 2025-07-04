@@ -205,7 +205,7 @@ const App = () => {
   // Função para atualizar o status de um lead e gerenciar leads fechados
   const atualizarStatusLead = async (id, novoStatus, phone) => { // Tornada async
     // Encontra o lead a ser atualizado
-    const leadToUpdate = leads.find((lead) => lead.id === id);
+    const leadToUpdate = leads.find((lead) => String(lead.id) === String(id)); // Garante comparação de string
     if (!leadToUpdate) {
       console.warn("Lead não encontrado para atualização de status.");
       return;
@@ -222,18 +222,18 @@ const App = () => {
     // Atualiza o estado local imediatamente
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.id === id ? updatedLead : lead
+        String(lead.id) === String(id) ? updatedLead : lead // Garante comparação de string
       )
     );
 
     // Se o status for 'Fechado', atualiza também a lista de leads fechados
     if (novoStatus === 'Fechado') {
       setLeadsFechados((prev) => {
-        const jaExiste = prev.some((lead) => lead.id === id); // Verifica pelo ID
+        const jaExiste = prev.some((lead) => String(lead.id) === String(id)); // Verifica pelo ID
 
         if (jaExiste) {
           return prev.map((lead) =>
-            lead.id === id ? { ...lead, Status: novoStatus, confirmado: true } : lead
+            String(lead.id) === String(id) ? { ...lead, Status: novoStatus, confirmado: true } : lead
           );
         } else {
           // Se não existe, adiciona o lead atualizado
@@ -283,7 +283,7 @@ const App = () => {
   const atualizarSeguradoraLead = (id, seguradora) => {
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.id === id
+        String(lead.id) === String(id) // Garante comparação de string
           ? limparCamposLead({ ...lead, insurer: seguradora })
           : lead
       )
@@ -300,7 +300,7 @@ const App = () => {
 
   // Função para confirmar a seguradora de um lead fechado
   const confirmarSeguradoraLead = (id, premio, seguradora, comissao, parcelamento) => {
-    const lead = leadsFechados.find((lead) => lead.ID === id);
+    const lead = leadsFechados.find((lead) => String(lead.ID) === String(id)); // Garante comparação de string
 
     if (!lead) return; // Garante que o lead existe
 
@@ -311,14 +311,14 @@ const App = () => {
 
     setLeadsFechados((prev) => {
       const atualizados = prev.map((l) =>
-        l.ID === id ? { ...l, insurerConfirmed: true } : l
+        String(l.ID) === String(id) ? { ...l, insurerConfirmed: true } : l // Garante comparação de string
       );
       return atualizados;
     });
 
     try {
       // Faz a chamada para o Apps Script via fetch POST
-      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_seguradora', {
+      fetch(GOOGLE_SHEETS_USERS + '?v=alterar_seguradora', { // Usa GOOGLE_SHEETS_USERS
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -337,7 +337,7 @@ const App = () => {
   const atualizarDetalhesLeadFechado = (id, campo, valor) => {
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.id === id ? { ...lead, [campo]: valor } : lead
+        String(lead.id) === String(id) ? { ...lead, [campo]: valor } : lead // Garante comparação de string
       )
     );
   };
@@ -348,7 +348,7 @@ const App = () => {
     let updatedLead = null; // Variável para armazenar o lead atualizado para envio ao GAS
 
     // Encontra o lead na lista atual
-    const leadToUpdate = leads.find((lead) => lead.id === leadId);
+    const leadToUpdate = leads.find((lead) => String(lead.id) === String(leadId)); // Garante comparação de string
     if (!leadToUpdate) {
       console.warn("Lead não encontrado para transferência.");
       return;
@@ -360,7 +360,7 @@ const App = () => {
       updatedLead = { ...leadToUpdate, responsavel: null, editado: new Date().toISOString() }; // Atualiza o objeto e data de edição para o GAS
     } else {
       // Busca o usuário normalmente se responsavelId não for null
-      let usuario = usuarios.find((u) => u.id === responsavelId);
+      let usuario = usuarios.find((u) => String(u.id) === String(responsavelId)); // Garante comparação de string
 
       if (!usuario) {
         console.warn("Usuário não encontrado para transferência de lead.");
@@ -373,7 +373,7 @@ const App = () => {
     // Atualiza o estado local imediatamente
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.id === leadId ? { ...lead, responsavel: newResponsavelName } : lead
+        String(lead.id) === String(leadId) ? { ...lead, responsavel: newResponsavelName } : lead // Garante comparação de string
       )
     );
 
@@ -396,7 +396,7 @@ const App = () => {
 
   // Função para atualizar o status ou tipo de um usuário
   const atualizarStatusUsuario = (id, novoStatus = null, novoTipo = null) => {
-    const usuario = usuarios.find((u) => u.id === id);
+    const usuario = usuarios.find((u) => String(u.id) === String(id)); // Garante comparação de string
     if (!usuario) return;
 
     // Atualizar só o que foi passado
@@ -405,7 +405,7 @@ const App = () => {
 
     try {
       // Faz a chamada para o Apps Script via fetch POST
-      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_usuario', {
+      fetch(GOOGLE_SHEETS_USERS + '?v=alterar_usuario', { // Usa GOOGLE_SHEETS_USERS
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -422,7 +422,7 @@ const App = () => {
     // Atualizar localmente também
     setUsuarios((prev) =>
       prev.map((u) =>
-        u.id === id
+        String(u.id) === String(id)
           ? {
             ...u,
             ...(novoStatus !== null ? { status: novoStatus } : {}),
