@@ -12,7 +12,7 @@ import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
 import CriarLead from './pages/CriarLead';
 
-// URL BASE do seu Web App no Google Apps Script (ATUALIZADA PARA A SUA ÚLTIMA VERSÃO)
+// URL BASE do seu Web App no Google Apps Script (ATUALIZADA)
 const GOOGLE_APPS_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
 
 // URLs para as Google Sheets APIs, usando a URL base
@@ -58,21 +58,21 @@ const App = () => {
                 const formattedLeads = sortedData.map((item, index) => ({
                     id: item.id ? Number(item.id) : index + 1,
                     name: item.name || item.Name || '',
-                    vehicleModel: item.vehiclemodel || item.vehicleModel || '',
-                    vehicleYearModel: item.vehicleyearmodel || item.vehicleYearModel || '',
+                    vehicleModel: item.vehiclemodel || item.vehicleModel || '', // Ajustado para consistência
+                    vehicleYearModel: item.vehicleyearmodel || item.vehicleYearModel || '', // Ajustado para consistência
                     city: item.city || '',
                     phone: item.phone || item.Telefone || '',
-                    insuranceType: item.insurancetype || item.insuranceType || '',
+                    insuranceType: item.insurancetype || item.insuranceType || '', // Ajustado para consistência
                     status: item.status || 'Selecione o status',
                     confirmado: item.confirmado === 'true' || item.confirmado === true,
-                    insurer: item.insurer || '',
-                    insurerConfirmed: item.insurerconfirmed === 'true' || item.insurerconfirmed === true,
+                    insurer: item.insurer || item.Seguradora || '', // Flexibilidade na leitura
+                    insurerConfirmed: item.insurerconfirmed === 'true' || item.insurerconfirmed === true, // Ajustado para consistência
                     usuarioId: item.usuarioid ? Number(item.usuarioid) : null,
-                    premioLiquido: item.premioliquido || '',
-                    comissao: item.comissao || '',
-                    parcelamento: item.parcelamento || '',
-                    createdAt: item.data || new Date().toISOString(),
-                    responsavel: item.responsavel || '',
+                    premioLiquido: item.premioliquido || item.PremioLiquido || '', // Flexibilidade na leitura
+                    comissao: item.comissao || item.Comissao || '', // Flexibilidade na leitura
+                    parcelamento: item.parcelamento || item.Parcelamento || '', // Flexibilidade na leitura
+                    createdAt: item.data || new Date().toISOString(), // Flexibilidade na leitura
+                    responsavel: item.responsavel || item.Responsavel || '', // Flexibilidade na leitura
                     editado: item.editado || ''
                 }));
                 
@@ -97,7 +97,25 @@ const App = () => {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_LEADS_FECHADOS);
             const data = await response.json();
             if (Array.isArray(data)) {
-                setLeadsFechados(data);
+                // Mapear dados para garantir consistência, especialmente 'Seguradora'
+                const formattedFechados = data.map(item => ({
+                    ID: item.ID || crypto.randomUUID(),
+                    name: item.name || '',
+                    vehicleModel: item.vehicleModel || '',
+                    vehicleYearModel: item.vehicleYearModel || '',
+                    city: item.city || '',
+                    phone: item.phone || '',
+                    insurer: item.insurer || item.Seguradora || '', // Prioriza 'Seguradora' se existir
+                    Data: item.Data || '',
+                    Responsavel: item.Responsavel || '',
+                    Status: item.Status || '',
+                    Seguradora: item.Seguradora || item.insurer || '', // Garante que Seguradora seja o campo principal para o render
+                    PremioLiquido: item.PremioLiquido || '',
+                    Comissao: item.Comissao || '',
+                    Parcelamento: item.Parcelamento || '',
+                    confirmado: item.confirmado === 'true' || item.confirmado === true,
+                }));
+                setLeadsFechados(formattedFechados);
             } else {
                 setLeadsFechados([]);
             }
@@ -136,19 +154,19 @@ const App = () => {
 
     useEffect(() => {
         fetchLeadsFromSheet();
-        const interval = setInterval(fetchLeadsFromSheet, 60000);
+        const interval = setInterval(fetchLeadsFromSheet, 60000); // 1 minuto
         return () => clearInterval(interval);
     }, [fetchLeadsFromSheet]);
 
     useEffect(() => {
         fetchLeadsFechadosFromSheet();
-        const interval = setInterval(fetchLeadsFechadosFromSheet, 60000);
+        const interval = setInterval(fetchLeadsFechadosFromSheet, 60000); // 1 minuto
         return () => clearInterval(interval);
     }, [fetchLeadsFechadosFromSheet]);
 
     useEffect(() => {
         fetchUsuariosFromSheet();
-        const interval = setInterval(fetchUsuariosFromSheet, 60000);
+        const interval = setInterval(fetchUsuariosFromSheet, 60000); // 1 minuto
         return () => clearInterval(interval);
     }, [fetchUsuariosFromSheet]);
 
@@ -168,45 +186,50 @@ const App = () => {
             return;
         }
 
+        // Atualiza o estado local imediatamente para feedback visual
         setLeads((prevLeads) =>
             prevLeads.map((lead) =>
                 lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
             )
         );
 
+        // Prepara os dados para envio, garantindo que as chaves correspondam ao Sheets
         const updatedLeadData = {
             id: leadToUpdate.id,
             name: leadToUpdate.name,
-            vehiclemodel: leadToUpdate.vehicleModel,
-            vehicleyearmodel: leadToUpdate.vehicleYearModel,
+            vehicleModel: leadToUpdate.vehicleModel, // Mantido como camelCase para envio se o script esperar
+            vehicleYearModel: leadToUpdate.vehicleYearModel, // Mantido como camelCase para envio
             city: leadToUpdate.city,
             phone: leadToUpdate.phone,
-            insurancetype: leadToUpdate.insuranceType,
+            insuranceType: leadToUpdate.insuranceType, // Mantido como camelCase para envio
             status: novoStatus,
             confirmado: true,
-            insurer: leadToUpdate.insurer,
-            insurerconfirmed: leadToUpdate.insurerConfirmed,
-            usuarioid: leadToUpdate.usuarioId,
-            premioliquido: leadToUpdate.premioLiquido,
-            comissao: leadToUpdate.comissao,
-            parcelamento: leadToUpdate.parcelamento,
-            data: leadToUpdate.createdAt,
-            responsavel: leadToUpdate.responsavel,
+            insurer: leadToUpdate.insurer, // Mantido como camelCase para envio
+            insurerConfirmed: leadToUpdate.insurerConfirmed, // Mantido como camelCase para envio
+            usuarioId: leadToUpdate.usuarioId, // Mantido como camelCase para envio
+            premioLiquido: leadToUpdate.premioLiquido, // Mantido como camelCase para envio
+            comissao: leadToUpdate.comissao, // Mantido como camelCase para envio
+            parcelamento: leadToUpdate.parcelamento, // Mantido como camelCase para envio
+            data: leadToUpdate.createdAt, // Assumindo que a coluna é 'data' no Sheets
+            responsavel: leadToUpdate.responsavel, // Assumindo que a coluna é 'responsavel' no Sheets
             editado: new Date().toLocaleString()
         };
 
+        console.log("Dados enviados para atualizar_lead (status):", updatedLeadData);
+
         try {
-            await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=salvar_lead`, {
+            const response = await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=salvar_lead`, {
                 method: 'POST',
-                mode: 'no-cors',
+                mode: 'no-cors', // Considere remover para depurar respostas do Apps Script
                 body: JSON.stringify(updatedLeadData),
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
+            // Não é possível ler a resposta com mode: 'no-cors'
             console.log(`Status do lead ${id} (${phone}) atualizado para ${novoStatus} no Sheets.`);
-            fetchLeadsFromSheet();
-            fetchLeadsFechadosFromSheet();
+            fetchLeadsFromSheet(); // Re-busca os leads após a atualização
+            fetchLeadsFechadosFromSheet(); // Re-busca os leads fechados também
 
         } catch (error) {
             console.error('Erro ao atualizar status do lead no Sheets:', error);
@@ -228,11 +251,11 @@ const App = () => {
                         vehicleYearModel: leadToUpdate.vehicleYearModel,
                         city: leadToUpdate.city,
                         phone: leadToUpdate.phone,
-                        insurer: leadToUpdate.insuranceType || leadToUpdate.insurer || '',
+                        // ATENÇÃO: Use 'Seguradora' aqui para corresponder à coluna no Sheets para leads fechados
+                        Seguradora: leadToUpdate.insurer || leadToUpdate.insuranceType || '', // Certifique-se de que o Apps Script lê isso
                         Data: leadToUpdate.createdAt || new Date().toISOString(),
                         Responsavel: leadToUpdate.responsavel || '',
                         Status: "Fechado",
-                        Seguradora: leadToUpdate.insurer || '',
                         PremioLiquido: leadToUpdate.premioLiquido || '',
                         Comissao: leadToUpdate.comissao || '',
                         Parcelamento: leadToUpdate.parcelamento || '',
@@ -251,11 +274,13 @@ const App = () => {
         parcelamento: "",
     });
 
+    // Esta função atualiza apenas o estado local, não o Sheets.
+    // A atualização no Sheets ocorre em 'confirmarSeguradoraLead'.
     const atualizarSeguradoraLead = useCallback((id, seguradora) => {
-        setLeads((prev) =>
+        setLeadsFechados((prev) => // Deve ser leadsFechados, não leads
             prev.map((lead) =>
-                lead.id === id
-                    ? limparCamposLead({ ...lead, insurer: seguradora })
+                lead.ID === id
+                    ? limparCamposLead({ ...lead, Seguradora: seguradora }) // Use Seguradora
                     : lead
             )
         );
@@ -271,27 +296,31 @@ const App = () => {
 
         const updatedLead = {
             ...lead,
-            Seguradora: seguradora,
-            PremioLiquido: premio,
-            Comissao: comissao,
-            Parcelamento: parcelamento,
-            insurerConfirmed: true
+            Seguradora: seguradora, // Garanta que esta chave corresponde à coluna no Sheets
+            PremioLiquido: premio, // Garanta que esta chave corresponde à coluna no Sheets
+            Comissao: comissao, // Garanta que esta chave corresponde à coluna no Sheets
+            Parcelamento: parcelamento, // Garanta que esta chave corresponde à coluna no Sheets
+            insurerConfirmed: true // Se você tiver uma coluna para isso no Sheets
         };
 
+        // Atualiza o estado local imediatamente
         setLeadsFechados((prev) =>
             prev.map((l) => (l.ID === id ? updatedLead : l))
         );
+
+        console.log("Dados enviados para alterar_seguradora:", updatedLead);
 
         try {
             await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=alterar_seguradora`, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({ lead: updatedLead }),
+                body: JSON.stringify({ lead: updatedLead }), // Envia o objeto lead completo
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
-            fetchLeadsFechadosFromSheet();
+            console.log(`Seguradora do lead ${id} confirmada para ${seguradora} no Sheets.`);
+            fetchLeadsFechadosFromSheet(); // Re-busca para garantir a consistência
         } catch (error) {
             console.error('Erro ao enviar lead para Apps Script:', error);
             alert('Erro ao salvar os dados da seguradora. Tente novamente.');
@@ -305,6 +334,7 @@ const App = () => {
             return;
         }
         
+        // Crie uma cópia do lead e atualize o campo específico
         const updatedLead = { ...leadToUpdate, [campo]: valor };
 
         setLeadsFechados((prev) =>
@@ -312,18 +342,20 @@ const App = () => {
                 lead.ID === id ? { ...lead, [campo]: valor } : lead
             )
         );
+        
+        console.log(`Dados enviados para atualizar_detalhe_fechado (campo: ${campo}, valor: ${valor}):`, updatedLead);
 
         try {
             await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=atualizar_detalhe_fechado`, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({ lead: updatedLead }),
+                body: JSON.stringify({ lead: updatedLead }), // Envia o objeto lead completo
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
             console.log(`Detalhe "${campo}" do lead ${id} atualizado para "${valor}" no Sheets.`);
-            fetchLeadsFechadosFromSheet();
+            fetchLeadsFechadosFromSheet(); // Re-busca para garantir a consistência
         } catch (error) {
             console.error('Erro ao atualizar detalhes do lead fechado no Sheets:', error);
             alert('Erro ao atualizar detalhes do lead no servidor.');
@@ -341,6 +373,7 @@ const App = () => {
             responsavelNome = usuario.nome;
         }
 
+        // Atualiza o estado local imediatamente
         setLeads((prev) =>
             prev.map((lead) =>
                 lead.id === leadId ? { ...lead, responsavel: responsavelNome } : lead
@@ -354,21 +387,23 @@ const App = () => {
                 return;
             }
     
+            // Dados a serem enviados, garantindo que 'responsavel' seja a chave correta
             const dataToSend = {
                 ...leadParaTransferir,
-                responsavel: responsavelNome
+                responsavel: responsavelNome // Certifique-se que o Sheets espera 'responsavel'
             };
+            console.log("Dados enviados para transferir_lead:", dataToSend);
 
             await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=transferir_lead`, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({ lead: dataToSend }),
+                body: JSON.stringify({ lead: dataToSend }), // Envia o objeto lead completo
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
             console.log(`Lead ${leadId} transferido para ${responsavelNome || 'Ninguém'} no Sheets.`);
-            fetchLeadsFromSheet();
+            fetchLeadsFromSheet(); // Re-busca para garantir a consistência
         } catch (error) {
             console.error('Erro ao transferir lead no Sheets:', error);
             alert('Erro ao transferir lead no servidor.');
@@ -387,11 +422,13 @@ const App = () => {
         if (novoStatus !== null) updatedUsuario.status = novoStatus;
         if (novoTipo !== null) updatedUsuario.tipo = novoTipo;
 
+        console.log("Dados enviados para salvar_usuario:", updatedUsuario);
+
         try {
             await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=salvar_usuario`, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({ usuario: updatedUsuario }),
+                body: JSON.stringify({ usuario: updatedUsuario }), // Envia o objeto usuario completo
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -489,9 +526,7 @@ const App = () => {
 
     return (
         <div style={{ display: 'flex', height: '100vh', width: '100vw' }}>
-            {/* O estilo inline 'backgroundColor: #2d3748' foi REMOVIDO daqui.
-                A largura (width) foi ajustada para 64 unidades do Tailwind (256px) para corresponder
-                com a classe 'w-64' usada dentro do Sidebar.jsx. */}
+            {/* O estilo inline 'backgroundColor: #2d3748' foi REMOVIDO. */}
             <div style={{ flexShrink: 0, width: '256px' }}> {/* 256px é o valor padrão para w-64 em Tailwind */}
                 <Sidebar isAdmin={isAdmin} usuarioLogado={usuarioLogado} /> {/* Passando usuarioLogado como prop */}
             </div>
