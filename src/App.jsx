@@ -34,6 +34,7 @@ const App = () => {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [leadsFechados, setLeadsFechados] = useState([]);
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
+  const [erroLogin, setErroLogin] = useState(''); // NOVO ESTADO PARA ERRO DE LOGIN
 
   useEffect(() => {
     const img = new Image();
@@ -283,7 +284,7 @@ const App = () => {
               Seguradora: leadParaAdicionar.Seguradora || "",
               PremioLiquido: leadParaAdicionar.premioLiquido || "",
               Comissao: leadParaAdicionar.comissao || "",
-              Parcelamento: leadParaAdicionar.parcelamento || "",
+              CParcelamento: leadParaAdicionar.parcelamento || "",
               id: leadParaAdicionar.id || null,
               usuario: leadParaAdicionar.usuario || "",
               nome: leadParaAdicionar.nome || "",
@@ -437,10 +438,10 @@ const App = () => {
         prev.map((u) =>
           u.id === id
             ? {
-                ...u,
-                ...(novoStatus !== null ? { status: novoStatus } : {}),
-                ...(novoTipo !== null ? { tipo: novoTipo } : {}),
-              }
+              ...u,
+              ...(novoStatus !== null ? { status: novoStatus } : {}),
+              ...(novoTipo !== null ? { tipo: novoTipo } : {}),
+            }
             : u
         )
       );
@@ -461,18 +462,63 @@ const App = () => {
     navigate(path);
   };
 
-  const handleLogin = () => {
-    const usuarioEncontrado = usuarios.find(
-      (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
-    );
+  // INÍCIO DA INCLUSÃO: handleLogin agora busca usuários diretamente
+  const handleLogin = async () => {
+    setErroLogin(''); // Limpa mensagens de erro anteriores
+    try {
+      // Busca os usuários diretamente da API para garantir dados atualizados
+      const response = await fetch(GOOGLE_SHEETS_USERS + '?v=pegar_usuario'); 
+      
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}`);
+      }
 
-    if (usuarioEncontrado) {
-      setIsAuthenticated(true);
-      setUsuarioLogado(usuarioEncontrado);
-    } else {
-      alert('Login ou senha inválidos ou usuário inativo.');
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('Erro ao parsear JSON da resposta de usuários (Login):', jsonError, responseText);
+        setErroLogin('Erro ao processar dados de usuários do servidor.');
+        return;
+      }
+
+      // Seu Apps Script deve retornar um array diretamente, não um objeto com { success: true, data: [] }
+      // Se o Apps Script retornar { success: true, data: [...] }, você precisaria de data.data
+      if (!Array.isArray(data)) { 
+        console.warn('API de usuários para login não retornou um array de dados esperado:', data);
+        setErroLogin('Erro desconhecido ao carregar usuários para login. Formato de dados inválido.');
+        return;
+      }
+
+      // Formata os usuários recebidos para o padrão esperado
+      const fetchedUsuarios = data.map((item) => ({
+        id: String(item.id || ''),
+        usuario: String(item.usuario || ''),
+        nome: String(item.nome || ''),
+        email: String(item.email || ''),
+        senha: String(item.senha || ''),
+        status: String(item.status || 'Ativo'),
+        tipo: String(item.tipo || 'Usuario'),
+      }));
+
+      const usuarioEncontrado = fetchedUsuarios.find(
+        (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
+      );
+
+      if (usuarioEncontrado) {
+        setIsAuthenticated(true);
+        setUsuarioLogado(usuarioEncontrado);
+        navigate('/dashboard'); // Redireciona após o login bem-sucedido
+      } else {
+        setErroLogin('Login ou senha inválidos ou usuário inativo.');
+      }
+    } catch (error) {
+      console.error('Erro durante o processo de login:', error);
+      setErroLogin('Ocorreu um erro ao tentar fazer login. Verifique sua conexão ou tente novamente.');
     }
   };
+  // FIM DA INCLUSÃO
 
   if (!isAuthenticated) {
     return (
@@ -508,6 +554,7 @@ const App = () => {
             onChange={(e) => setSenhaInput(e.target.value)}
             className="w-full mb-2 px-4 py-2 rounded text-black"
           />
+          {erroLogin && <p className="text-red-300 text-sm mb-4">{erroLogin}</p>} {/* Exibe o erro de login */}
           <div className="text-right text-sm mb-4">
             <a href="#" className="text-white underline">
               Esqueci minha senha
