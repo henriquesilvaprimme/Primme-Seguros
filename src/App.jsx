@@ -15,6 +15,13 @@ import CriarLead from './pages/CriarLead';
 // NOVA URL ÚNICA DO GOOGLE APPS SCRIPT
 const GOOGLE_SHEETS_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
 
+// URLs para as Google Sheets APIs, usando a URL base
+const GOOGLE_SHEETS_SCRIPT_URL = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=getLeads`;
+const GOOGLE_SHEETS_USERS = GOOGLE_APPS_SCRIPT_BASE_URL; // O parâmetro 'v=pegar_usuario' será adicionado nas chamadas
+const GOOGLE_SHEETS_LEADS_FECHADOS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`;
+const GOOGLE_SHEETS_ALTERAR_SEGURADORA = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=alterar_seguradora`;
+const GOOGLE_SHEETS_ALTERAR_USUARIO = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=alterar_usuario`;
+
 const App = () => {
   const navigate = useNavigate();
 
