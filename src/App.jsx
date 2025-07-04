@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
@@ -178,18 +178,16 @@ const App = () => {
   }, [fetchUsuariosFromSheet]);
 
   const adicionarUsuario = (usuario) => {
-    // Apenas adiciona localmente, o salvamento no Sheets deve ser feito dentro do CriarUsuario
-    // O ideal é que CriarUsuario chame fetchUsuariosFromSheet após salvar
+    // Apenas adiciona localmente. O CriarUsuario DEVE chamar fetchUsuariosFromSheet após o POST.
     setUsuarios((prev) => [...prev, { ...usuario, id: String(prev.length + 1) }]);
   };
 
   const adicionarLead = (lead) => {
-    // Apenas adiciona localmente, o salvamento no Sheets deve ser feito dentro do CriarLead
-    // O ideal é que CriarLead chame fetchLeadsFromSheet após salvar
+    // Apenas adiciona localmente. O CriarLead DEVE chamar fetchLeadsFromSheet após o POST.
     setLeads((prev) => [...prev, lead]);
   };
 
-  // Função para atualizar status do lead (AGORA COM NOVA LÓGICA DO GAS)
+  // Função para atualizar status do lead (COM no-cors)
   const atualizarStatusLead = async (id, novoStatus, phone) => {
     // Otimisticamente atualiza o estado local para resposta rápida da UI
     setLeads((prev) =>
@@ -200,44 +198,41 @@ const App = () => {
 
     try {
       const payload = {
-        action: 'alterar_status', // Ação para o GAS
+        action: 'alterar_status',
         phone: String(phone).trim(),
         status: novoStatus,
       };
 
-      console.log("Enviando atualização de status do lead (POST):", payload);
+      console.log("Enviando atualização de status do lead (POST com no-cors):", payload);
       const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
+        mode: 'no-cors', // Mantido no-cors
         headers: {
           'Content-Type': 'application/json',
         },
-        // REMOVIDO: mode: 'no-cors' para poder ler a resposta
         body: JSON.stringify(payload),
       });
 
-      // Se não for no-cors, você pode ler a resposta
-      const result = await response.json();
-      console.log("Resposta do GAS (alterar_status):", result);
+      // Com no-cors, você não pode ler a resposta do servidor.
+      // Apenas sabe que a requisição foi enviada.
+      console.log("Requisição de atualização de status do lead enviada. Verifique os logs do GAS.");
 
-      if (result.status === "success") {
-        alert(result.message);
-        // Re-buscar dados para garantir a sincronização após a operação no Sheets
+      // Forçamos o refresh dos dados após um pequeno delay,
+      // pois não temos confirmação do servidor.
+      setTimeout(() => {
         fetchLeadsFromSheet();
         fetchLeadsFechadosFromSheet();
-      } else {
-        alert("Erro ao atualizar status do lead: " + result.message);
-        // Em caso de erro, re-buscar para reverter o estado otimista, se desejar
-        fetchLeadsFromSheet();
-      }
+      }, 1000); // Pequeno atraso para dar tempo ao GAS de processar
+
     } catch (error) {
-      console.error('Erro ao atualizar status do lead no Sheets:', error);
-      alert('Erro de rede ou servidor ao atualizar status do lead. Por favor, tente novamente.');
-      fetchLeadsFromSheet(); // Re-buscar em caso de erro de rede
+      console.error('Erro ao enviar atualização de status do lead:', error);
+      alert('Erro de rede ao atualizar status do lead. Por favor, tente novamente.');
+      // Se houve um erro de rede (não CORS), ainda precisamos re-buscar
+      fetchLeadsFromSheet();
     }
   };
 
-
-  // Função para confirmar seguradora do lead (AGORA COM NOVA LÓGICA DO GAS)
+  // Função para confirmar seguradora do lead (COM no-cors)
   const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
     const lead = leadsFechados.find((l) => String(l.ID) === String(id));
 
@@ -246,7 +241,7 @@ const App = () => {
       return;
     }
 
-    // Atualiza otimisticamente o estado local (opcional, pode ser feito após sucesso do GAS)
+    // Otimisticamente atualiza o estado local
     setLeadsFechados((prev) =>
       prev.map((l) =>
         String(l.ID) === String(id)
@@ -264,44 +259,40 @@ const App = () => {
 
     try {
       const payload = {
-        action: 'alterar_seguradora', // Ação para o GAS
+        action: 'alterar_seguradora',
         lead: {
-          ID: String(lead.ID), // Envia o ID para o GAS identificar a linha
+          ID: String(lead.ID),
           Seguradora: seguradora,
           PremioLiquido: premio,
           Comissao: comissao,
           Parcelamento: parcelamento,
-          // Não precisa enviar todos os outros campos do lead aqui, apenas os que serão atualizados
         },
       };
 
-      console.log("Enviando confirmação de seguradora (POST):", payload);
+      console.log("Enviando confirmação de seguradora (POST com no-cors):", payload);
       const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
+        mode: 'no-cors', // Mantido no-cors
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
-      console.log("Resposta do GAS (alterar_seguradora):", result);
+      console.log("Requisição de confirmação de seguradora enviada. Verifique os logs do GAS.");
 
-      if (result.status === "success") {
-        alert(result.message);
-        fetchLeadsFechadosFromSheet(); // Re-busca para garantir a sincronização
-      } else {
-        alert("Erro ao confirmar seguradora do lead: " + result.message);
-        fetchLeadsFechadosFromSheet(); // Re-buscar para reverter o estado otimista
-      }
+      setTimeout(() => {
+        fetchLeadsFechadosFromSheet(); // Força o refresh
+      }, 1000);
+
     } catch (error) {
       console.error('Erro ao enviar lead fechado para atualização de seguradora:', error);
-      alert('Erro de rede ou servidor ao confirmar seguradora do lead.');
-      fetchLeadsFechadosFromSheet(); // Re-buscar em caso de erro de rede
+      alert('Erro de rede ao confirmar seguradora do lead.');
+      fetchLeadsFechadosFromSheet();
     }
   };
 
-  // Função para transferir lead (AGORA COM NOVA LÓGICA DO GAS)
+  // Função para transferir lead (COM no-cors)
   const transferirLead = async (leadId, responsavelId) => {
     let responsavelNome = null;
     let usuario = usuarios.find((u) => String(u.id) === String(responsavelId));
@@ -322,38 +313,35 @@ const App = () => {
 
     try {
       const payload = {
-        action: 'alterar_atribuido', // Ação para o GAS
-        id: leadId, // O GAS espera o número da linha aqui (dados.id)
-        usuarioId: String(responsavelId), // Envia o ID do usuário para o GAS procurar o nome
+        action: 'alterar_atribuido',
+        id: leadId,
+        usuarioId: String(responsavelId),
       };
 
-      console.log("Enviando transferência de lead (POST):", payload);
+      console.log("Enviando transferência de lead (POST com no-cors):", payload);
       const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
+        mode: 'no-cors', // Mantido no-cors
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
-      console.log("Resposta do GAS (transferir_lead):", result);
+      console.log("Requisição de transferência de lead enviada. Verifique os logs do GAS.");
 
-      if (result.status === "success") {
-        alert(result.message);
-        fetchLeadsFromSheet(); // Re-busca para garantir a sincronização
-      } else {
-        alert("Erro ao transferir lead: " + result.message);
-        fetchLeadsFromSheet(); // Re-buscar para reverter o estado otimista
-      }
+      setTimeout(() => {
+        fetchLeadsFromSheet(); // Força o refresh
+      }, 1000);
+
     } catch (error) {
       console.error('Erro ao transferir lead no Sheets:', error);
-      alert('Erro de rede ou servidor ao transferir lead.');
-      fetchLeadsFromSheet(); // Re-buscar em caso de erro de rede
+      alert('Erro de rede ao transferir lead.');
+      fetchLeadsFromSheet();
     }
   };
 
-  // Função para atualizar status/tipo do usuário (AGORA COM NOVA LÓGICA DO GAS)
+  // Função para atualizar status/tipo do usuário (COM no-cors)
   const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
     const usuario = usuarios.find((u) => String(u.id) === String(id));
     if (!usuario) {
@@ -380,37 +368,34 @@ const App = () => {
 
     try {
       const payload = {
-        action: 'alterar_usuario', // Ação para o GAS
+        action: 'alterar_usuario',
         usuario: {
-          id: String(id), // ID do usuário para o GAS identificar
-          status: novoStatus, // Pode ser null se não for atualizado
-          tipo: novoTipo,     // Pode ser null se não for atualizado
+          id: String(id),
+          status: novoStatus,
+          tipo: novoTipo,
         },
       };
 
-      console.log("Enviando atualização de status/tipo do usuário (POST):", payload);
+      console.log("Enviando atualização de status/tipo do usuário (POST com no-cors):", payload);
       const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
+        mode: 'no-cors', // Mantido no-cors
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
-      console.log("Resposta do GAS (alterar_usuario):", result);
+      console.log("Requisição de atualização de usuário enviada. Verifique os logs do GAS.");
 
-      if (result.status === "success") {
-        alert(result.message);
-        fetchUsuariosFromSheet(); // Re-busca para garantir a sincronização
-      } else {
-        alert("Erro ao atualizar status/tipo do usuário: " + result.message);
-        fetchUsuariosFromSheet(); // Re-buscar para reverter o estado otimista
-      }
+      setTimeout(() => {
+        fetchUsuariosFromSheet(); // Força o refresh
+      }, 1000);
+
     } catch (error) {
       console.error('Erro ao atualizar status/tipo do usuário no Sheets:', error);
-      alert('Erro de rede ou servidor ao atualizar status/tipo do usuário.');
-      fetchUsuariosFromSheet(); // Re-buscar em caso de erro de rede
+      alert('Erro de rede ao atualizar status/tipo do usuário.');
+      fetchUsuariosFromSheet();
     }
   };
 
@@ -634,7 +619,7 @@ const App = () => {
                   usuarios={usuarios}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
                   fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
-                  leads={leads} // Pode ser útil, dependendo de como o ranking usa leads
+                  leads={leads}
                 />
               </PrivateRoute>
             }
