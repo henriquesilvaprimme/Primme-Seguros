@@ -56,7 +56,7 @@ const App = () => {
 
         // Formata os leads para o formato esperado pelo aplicativo
         const formattedLeads = sortedData.map((item, index) => ({
-          id: item.id ? Number(item.id) : index + 1,
+          id: item.id ? String(item.id) : crypto.randomUUID(), // Garante que o ID seja string
           name: item.name || item.Name || '',
           vehicleModel: item.vehiclemodel || item.vehiclemodel || '',
           vehicleYearModel: item.vehicleyearmodel || item.vehicleyearmodel || '',
@@ -67,7 +67,7 @@ const App = () => {
           confirmado: item.confirmado === 'true' || item.confirmado === true,
           insurer: item.insurer || '',
           insurerConfirmed: item.insurerConfirmed === 'true' || item.insurerConfirmed === true,
-          usuarioId: item.usuarioId ? Number(item.usuarioId) : null,
+          usuarioId: item.usuarioId ? String(item.usuarioId) : null, // Garante que o usuarioId seja string
           premioLiquido: item.premioLiquido || '',
           comissao: item.comissao || '',
           parcelamento: item.parcelamento || '',
@@ -143,7 +143,7 @@ const App = () => {
         if (Array.isArray(data)) {
           // Formata os usuários para o formato esperado pelo aplicativo
           const formattedUsuarios = data.map((item) => ({
-            id: item.id || '',
+            id: item.id ? String(item.id) : crypto.randomUUID(), // Garante que o ID seja string
             usuario: item.usuario || '',
             nome: item.nome || '',
             email: item.email || '',
@@ -175,7 +175,7 @@ const App = () => {
 
   // Função para adicionar um novo usuário ao estado local
   const adicionarUsuario = (usuario) => {
-    setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
+    setUsuarios((prev) => [...prev, { ...usuario, id: usuario.id || crypto.randomUUID() }]); // Garante um ID único
   };
 
   // Função para adicionar um novo lead ao estado local
@@ -241,7 +241,7 @@ const App = () => {
               PremioLiquido: leadParaAdicionar.premioLiquido || "",
               Comissao: leadParaAdicionar.comissao || "",
               Parcelamento: leadParaAdicionar.parcelamento || "",
-              id: leadParaAdicionar.id || null,
+              id: leadParaAdicionar.id || null, // Manter o ID original do lead
               usuario: leadParaAdicionar.usuario || "",
               nome: leadParaAdicionar.nome || "",
               email: leadParaAdicionar.email || "",
@@ -559,7 +559,7 @@ const App = () => {
               {/* Rota para criar um novo Usuário */}
               <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
               {/* Rota para criar um novo Lead */}
-              <Route path="/criar-lead" element={<CriarLead adicionarLead={adicionarLead} />} />
+              <Route path="/criar-lead" element={<CriarLead adicionarLead={adicionarLead} usuarioLogado={usuarioLogado} />} />
               {/* Rota para gerenciar Usuários */}
               <Route
                 path="/usuarios"
