@@ -544,7 +544,7 @@ const App = () => {
                   usuarios={usuarios}
                   // onUpdateInsurer e onUpdateDetalhes removidos, pois a lógica está em onConfirmInsurer
                   onConfirmInsurer={confirmarSeguradoraLead}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
                   isAdmin={isAdmin}
                   onAbrirLead={onAbrirLead}
                   leadSelecionado={leadSelecionado}
@@ -579,7 +579,7 @@ const App = () => {
                 <BuscarLead
                   leads={leads}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
                 />
               </PrivateRoute>
             }
@@ -601,7 +601,7 @@ const App = () => {
                       leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
                       usuarios={usuarios}
                       fetchLeadsFromSheet={fetchLeadsFromSheet}
-                      fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
+                      fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
                       atualizarStatusUsuario={atualizarStatusUsuario}
                     />
                   </PrivateRoute>
@@ -616,7 +616,7 @@ const App = () => {
                 <Ranking
                   usuarios={usuarios}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
                   leads={leads}
                 />
               </PrivateRoute>
