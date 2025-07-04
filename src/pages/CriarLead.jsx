@@ -179,7 +179,7 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
           <option value="">Selecione o Tipo de Seguro</option>
           <option value="Novo">Novo</option>
           <option value="Renovacao">Renovação</option>
-          <option value="Indicacao">Indicação</option>
+          <option value="Indicacão">Indicação</option>
         </select>
       </div>
 
