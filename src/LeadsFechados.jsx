@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const LeadsFechados = ({
   leads,
   usuarios,
-  onConfirmInsurer,
+  onUpdateInsurer, // Prop de função para atualizar seguradora (se usada)
+  onConfirmInsurer, // Prop de função para confirmar todos os detalhes (central)
+  onUpdateDetalhes, // Prop de função para atualizar detalhes individualmente (se usada)
   fetchLeadsFechadosFromSheet,
   isAdmin,
 }) => {
-  // Filtramos os leads fechados diretamente da prop 'leads'
-  // IMPORTANTE: Usamos 'lead.status' (minúscula) como padronizado no App.jsx
-  const fechados = leads.filter((lead) => lead.status === 'Fechado');
+  // Filtramos os leads fechados usando a chave 'Status' como vem do seu Sheets
+  const fechados = leads.filter((lead) => lead.Status === 'Fechado');
+
+  console.log("usuarioLogado", isAdmin);
 
   // Obtém o mês e ano atual no formato 'YYYY-MM'
   const getMesAnoAtual = () => {
@@ -19,7 +22,75 @@ const LeadsFechados = ({
     return `${ano}-${mes}`;
   };
 
-  // Os estados para os filtros de input continuam os mesmos
+  // Estado local 'valores' para gerenciar os inputs editáveis
+  const [valores, setValores] = useState(() => {
+    const inicial = {};
+    fechados.forEach((lead) => {
+      inicial[lead.ID] = {
+        // PremioLiquido armazenado em centavos para manipulação interna precisa
+        PremioLiquido: lead.PremioLiquido !== undefined && lead.PremioLiquido !== null
+          ? Math.round(parseFloat(String(lead.PremioLiquido).replace(',', '.')) * 100)
+          : 0,
+        // Comissão como string para exibição, mas parseado para float ao enviar
+        Comissao: lead.Comissao !== undefined && lead.Comissao !== null
+          ? String(lead.Comissao).replace('.', ',') // Garante que é string com vírgula para exibição
+          : '',
+        Parcelamento: lead.Parcelamento || '',
+        insurer: lead.Seguradora || '', // 'insurer' aqui é o nome da chave para o select de seguradora
+      };
+    });
+    return inicial;
+  });
+
+  // useEffect para sincronizar 'valores' quando a prop 'leads' muda (ex: após um refresh)
+  useEffect(() => {
+    setValores((prevValores) => {
+      const novosValores = { ...prevValores };
+
+      // Itera sobre os leads fechados mais recentes e atualiza o estado local
+      leads
+        .filter((lead) => lead.Status === 'Fechado')
+        .forEach((lead) => {
+          // Atualiza se o lead não existe no estado local ou se os valores do lead mudaram
+          // (evita sobrescrever edições do usuário que ainda não foram salvas)
+          if (!novosValores[lead.ID] ||
+              novosValores[lead.ID].PremioLiquido !== (
+                lead.PremioLiquido !== undefined && lead.PremioLiquido !== null
+                  ? Math.round(parseFloat(String(lead.PremioLiquido).replace(',', '.')) * 100)
+                  : 0
+              ) ||
+              novosValores[lead.ID].Comissao !== (
+                lead.Comissao !== undefined && lead.Comissao !== null
+                  ? String(lead.Comissao).replace('.', ',')
+                  : ''
+              ) ||
+              novosValores[lead.ID].Parcelamento !== (lead.Parcelamento || '') ||
+              novosValores[lead.ID].insurer !== (lead.Seguradora || '')
+          ) {
+            novosValores[lead.ID] = {
+              PremioLiquido: lead.PremioLiquido !== undefined && lead.PremioLiquido !== null
+                ? Math.round(parseFloat(String(lead.PremioLiquido).replace(',', '.')) * 100)
+                : 0,
+              Comissao: lead.Comissao !== undefined && lead.Comissao !== null
+                ? String(lead.Comissao).replace('.', ',')
+                : '',
+              Parcelamento: lead.Parcelamento || '',
+              insurer: lead.Seguradora || '',
+            };
+          }
+        });
+
+      // Remove leads que não são mais fechados ou foram removidos
+      Object.keys(novosValores).forEach(id => {
+        if (!leads.some(lead => String(lead.ID) === id && lead.Status === 'Fechado')) {
+          delete novosValores[id];
+        }
+      });
+
+      return novosValores;
+    });
+  }, [leads]); // Dependência: Apenas re-executa quando a prop 'leads' muda
+
   const [nomeInput, setNomeInput] = useState('');
   const [dataInput, setDataInput] = useState(getMesAnoAtual());
   const [filtroNome, setFiltroNome] = useState('');
@@ -41,123 +112,113 @@ const LeadsFechados = ({
 
   const aplicarFiltroData = () => {
     setFiltroData(dataInput);
+    console.log(dataInput);
   };
 
   // Função para atualizar leads fechados com mensagem de carregamento
   const handleAtualizar = async () => {
     setAtualizando(true);
     try {
-      await fetchLeadsFechadosFromSheet(); // Esta função busca todos os leads (inclusive fechados)
+      await fetchLeadsFechadosFromSheet();
     } catch (error) {
       console.error('Erro ao atualizar leads fechados:', error);
     }
     setAtualizando(false);
   };
 
-  // Ordena os leads fechados
   const fechadosOrdenados = [...fechados].sort((a, b) => {
-    // Usamos 'Data' que é a chave formatada no App.jsx (ex: "2024-07-04T...")
-    const dateA = new Date(a.Data);
-    const dateB = new Date(b.Data);
-    return dateB - dateA; // mais recente primeiro
+    const dataA = new Date(a.Data); // Usando 'Data' como vem do seu Sheet
+    const dataB = new Date(b.Data);
+    return dataB - dataA; // mais recente primeiro
   });
 
-  // Aplica os filtros de nome e data
   const leadsFiltrados = fechadosOrdenados.filter((lead) => {
-    // Usamos 'name' que é a chave padronizada no App.jsx
     const nomeMatch = normalizarTexto(lead.name || '').includes(
       normalizarTexto(filtroNome || '')
     );
-    // Usamos 'Data' que é a chave formatada no App.jsx (ex: "2024-07-04T...")
     const dataMatch = filtroData ? lead.Data?.startsWith(filtroData) : true;
     return nomeMatch && dataMatch;
   });
 
-  // --- Funções de Formatação e Parse ---
-
-  // Formata um número para moeda BRL
-  const formatarMoeda = (valor) => {
-    const num = parseFloat(valor);
-    if (isNaN(num)) return '';
-    return num.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+  // Formata valor de centavos para exibição em BRL (ex: 123456 -> "1.234,56")
+  const formatarMoeda = (valorCentavos) => {
+    if (isNaN(valorCentavos) || valorCentavos === null) return '';
+    return (valorCentavos / 100).toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
   };
 
-  // Converte string de moeda (ex: R$ 1.234,56) para float (1234.56)
-  const parseMoedaToFloat = (moedaString) => {
-    if (typeof moedaString !== 'string' || moedaString.trim() === '') return 0;
-    // Remove "R$", pontos de milhar, e substitui vírgula decimal por ponto
-    const cleanedString = moedaString.replace(/[R$\s.]/g, '').replace(',', '.');
-    return parseFloat(cleanedString) || 0;
+  // Funções para manipulação de inputs
+  const handlePremioLiquidoChange = (id, valor) => {
+    // Permite apenas números e vírgula, e converte para centavos
+    const somenteNumeros = valor.replace(/\D/g, ''); // Remove tudo exceto dígitos
+    let valorCentavos = parseInt(somenteNumeros, 10);
+    if (isNaN(valorCentavos)) valorCentavos = 0;
+
+    setValores((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        PremioLiquido: valorCentavos, // Armazena em centavos
+      },
+    }));
   };
 
-  // Formata um número para porcentagem (ex: 12.5 para "12,50")
-  const formatarPorcentagem = (valor) => {
-    const num = parseFloat(valor);
-    if (isNaN(num)) return '';
-    return num.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const handlePremioLiquidoBlur = (id) => {
+    const valorCentavos = valores[id]?.PremioLiquido || 0;
+    const valorReais = valorCentavos / 100; // Converte para Reais para enviar
+    onUpdateDetalhes(id, 'PremioLiquido', valorReais); // Chamada para atualizar no App.jsx/Sheets
   };
 
-  // Converte string de porcentagem (ex: "12,50" ou "12.5") para float (12.5)
-  const parsePorcentagemToFloat = (porcentagemString) => {
-    if (typeof porcentagemString !== 'string' || porcentagemString.trim() === '') return 0;
-    // Substitui vírgula por ponto para parse
-    const cleanedString = porcentagemString.replace(',', '.');
-    return parseFloat(cleanedString) || 0;
+  const handleComissaoChange = (id, valor) => {
+    // Permite formato "XX,X" ou "XX"
+    const regex = /^\d{0,3}(?:,\d{0,2})?$/; // Ex: 100,00 ou 10,0 ou 5
+
+    // Limita o tamanho máximo da entrada (ex: "100,00" tem 6 caracteres)
+    const valorLimpo = valor.replace('.', ','); // Garante vírgula para entrada brasileira
+    const valorFormatado = valorLimpo.length > 6 ? valorLimpo.substring(0, 6) : valorLimpo;
+
+
+    if (valorFormatado === '' || regex.test(valorFormatado)) {
+      setValores((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          Comissao: valorFormatado, // Armazena como string formatada para exibição
+        },
+      }));
+
+      // Converte para float para enviar para onUpdateDetalhes
+      const valorFloat = parseFloat(valorFormatado.replace(',', '.'));
+      onUpdateDetalhes(id, 'Comissao', isNaN(valorFloat) ? '' : valorFloat);
+    }
   };
 
-  // Funções de tratamento de input que chamarão onConfirmInsurer
-  // Elas devem passar os valores ATUAIS do lead para os campos não alterados
-  const handlePremioLiquidoChange = (leadId, event) => {
-    // Ao sair do campo, converte o valor formatado para float e envia
-    const numericValue = parseMoedaToFloat(event.target.value);
-    onConfirmInsurer(
-      leadId,
-      numericValue, // Envia o valor numérico tratado
-      leads.find((l) => String(l.ID) === String(leadId))?.insurer || '', // Usando lead.insurer
-      leads.find((l) => String(l.ID) === String(leadId))?.comissao || 0, // Usando lead.comissao
-      leads.find((l) => String(l.ID) === String(leadId))?.parcelamento || '' // Usando lead.parcelamento
-    );
+  const handleParcelamentoChange = (id, valor) => {
+    setValores((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        Parcelamento: valor,
+      },
+    }));
+    onUpdateDetalhes(id, 'Parcelamento', valor); // Chamada para atualizar no App.jsx/Sheets
   };
 
-  const handleComissaoChange = (leadId, event) => {
-    // Ao sair do campo, converte o valor formatado para float e envia
-    const numericValue = parsePorcentagemToFloat(event.target.value);
-    onConfirmInsurer(
-      leadId,
-      leads.find((l) => String(l.ID) === String(leadId))?.premioliquido || 0, // Usando lead.premioliquido
-      leads.find((l) => String(l.ID) === String(leadId))?.insurer || '', // Usando lead.insurer
-      numericValue, // Envia o valor numérico tratado
-      leads.find((l) => String(l.ID) === String(leadId))?.parcelamento || '' // Usando lead.parcelamento
-    );
+  const handleInsurerChange = (id, valor) => {
+    setValores((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        insurer: valor, // Atualiza o estado local para o select
+      },
+    }));
+    onUpdateInsurer(id, valor); // Chamada para atualizar apenas a seguradora
+    // Você pode chamar onUpdateDetalhes aqui também se preferir um ponto de entrada unificado:
+    // onUpdateDetalhes(id, 'Seguradora', valor);
   };
 
-  const handleParcelamentoChange = (leadId, event) => {
-    onConfirmInsurer(
-      leadId,
-      leads.find((l) => String(l.ID) === String(leadId))?.premioliquido || 0,
-      leads.find((l) => String(l.ID) === String(leadId))?.insurer || '',
-      leads.find((l) => String(l.ID) === String(leadId))?.comissao || 0,
-      event.target.value // Novo valor de parcelamento
-    );
-  };
-
-  const handleInsurerChange = (leadId, event) => {
-    onConfirmInsurer(
-      leadId,
-      leads.find((l) => String(l.ID) === String(leadId))?.premioliquido || 0,
-      event.target.value, // Novo valor da seguradora
-      leads.find((l) => String(l.ID) === String(leadId))?.comissao || 0,
-      leads.find((l) => String(l.ID) === String(leadId))?.parcelamento || ''
-    );
-  };
 
   // Styles (mantidos os mesmos)
   const inputWrapperStyle = {
@@ -304,6 +365,7 @@ const LeadsFechados = ({
         <p>Não há leads fechados que correspondam ao filtro aplicado.</p>
       ) : (
         leadsFiltrados.map((lead) => {
+          // Usa lead.Seguradora para determinar a cor do fundo e da borda
           const containerStyle = {
             display: 'flex',
             alignItems: 'center',
@@ -311,23 +373,24 @@ const LeadsFechados = ({
             padding: '15px',
             marginBottom: '15px',
             borderRadius: '5px',
-            // Usa 'insurer' para verificar se foi confirmado
-            backgroundColor: lead.insurer ? '#e6f4ea' : '#fff',
-            border: lead.insurer ? '2px solid #4CAF50' : '1px solid #ddd',
+            backgroundColor: lead.Seguradora ? '#e6f4ea' : '#fff',
+            border: lead.Seguradora ? '2px solid #4CAF50' : '1px solid #ddd',
           };
 
           const responsavel = usuarios.find(
             (u) => u.nome === lead.Responsavel && isAdmin
           );
 
-          // Verifica se todos os campos estão preenchidos para habilitar o botão
-          // Usa as chaves padronizadas aqui: 'insurer', 'premioliquido', 'comissao', 'parcelamento'
+          // Habilita/Desabilita o botão de confirmação
+          // Usa os valores do estado local 'valores' para a validação
           const isButtonDisabled =
-            !lead.insurer ||
-            parseFloat(lead.premioliquido) === 0 || // Garante que seja numérico e não zero
-            parseFloat(lead.comissao) === 0 || // Garante que seja numérico e não zero
-            !lead.parcelamento ||
-            lead.parcelamento === '';
+            !valores[lead.ID]?.insurer ||
+            !valores[lead.ID]?.PremioLiquido ||
+            valores[lead.ID]?.PremioLiquido === 0 ||
+            !valores[lead.ID]?.Comissao ||
+            valores[lead.ID]?.Comissao === '' ||
+            !valores[lead.ID]?.Parcelamento ||
+            valores[lead.ID]?.Parcelamento === '';
 
           return (
             <div key={lead.ID} style={containerStyle}>
@@ -345,9 +408,9 @@ const LeadsFechados = ({
                 <p>
                   <strong>Telefone:</strong> {lead.phone}
                 </p>
+                {/* Exibe o Tipo de Seguro (que não é editável aqui) */}
                 <p>
-                  {/* Exibe o nome da seguradora do campo padronizado */}
-                  <strong>Tipo de Seguro:</strong> {lead.insuranceType}
+                  <strong>Tipo de Seguro:</strong> {lead.insurer}
                 </p>
 
                 {responsavel && (
@@ -365,12 +428,13 @@ const LeadsFechados = ({
                   minWidth: '250px',
                 }}
               >
+                {/* SELECT Seguradora */}
                 <select
-                  // Usa 'insurer' para o valor do select
-                  value={lead.insurer || ''}
+                  // O valor do select vem do estado local `valores[lead.ID]?.insurer`
+                  value={valores[lead.ID]?.insurer || ''}
                   onChange={(e) => handleInsurerChange(lead.ID, e.target.value)}
-                  // Desabilita se já houver uma seguradora preenchida
-                  disabled={!!lead.insurer}
+                  // O select é desabilitado se `lead.Seguradora` já tiver um valor
+                  disabled={!!lead.Seguradora}
                   style={{
                     padding: '8px',
                     border: '2px solid #ccc',
@@ -386,39 +450,46 @@ const LeadsFechados = ({
                   <option value="Demais Seguradoras">Demais Seguradoras</option>
                 </select>
 
+                {/* INPUT Prêmio Líquido */}
                 <div style={inputWrapperStyle}>
                   <span style={prefixStyle}>R$</span>
                   <input
                     type="text"
                     placeholder="Prêmio Líquido"
-                    // **Ajuste Aqui:** Usa formatarMoeda para exibir o valor que já está no lead
-                    value={formatarMoeda(lead.premioliquido)}
-                    // onBlur é melhor para campos numéricos formatados, para que o usuário possa digitar livremente e formatar ao sair
-                    onBlur={(e) => handlePremioLiquidoChange(lead.ID, e)}
-                    disabled={!!lead.insurer}
+                    // O valor do input vem do estado local `valores[lead.ID]?.PremioLiquido`
+                    // formatado para moeda
+                    value={formatarMoeda(valores[lead.ID]?.PremioLiquido)}
+                    onChange={(e) => handlePremioLiquidoChange(lead.ID, e.target.value)}
+                    onBlur={() => handlePremioLiquidoBlur(lead.ID)} // Chama API ao perder foco
+                    // O input é desabilitado se `lead.Seguradora` já tiver um valor
+                    disabled={!!lead.Seguradora}
                     style={inputWithPrefixStyle}
                   />
                 </div>
 
+                {/* INPUT Comissão */}
                 <div style={inputWrapperStyle}>
                   <span style={prefixStyle}>%</span>
                   <input
                     type="text"
                     placeholder="Comissão (%)"
-                    // **Ajuste Aqui:** Usa formatarPorcentagem para exibir o valor que já está no lead
-                    value={formatarPorcentagem(lead.comissao)}
-                    onBlur={(e) => handleComissaoChange(lead.ID, e)}
-                    disabled={!!lead.insurer}
-                    maxLength={6} // Aumentado para acomodar até "100,00"
+                    // O valor do input vem do estado local `valores[lead.ID]?.Comissao`
+                    value={valores[lead.ID]?.Comissao || ''}
+                    onChange={(e) => handleComissaoChange(lead.ID, e.target.value)}
+                    // O input é desabilitado se `lead.Seguradora` já tiver um valor
+                    disabled={!!lead.Seguradora}
+                    maxLength={6} // Permite até 100,00
                     style={inputWithPrefixStyle}
                   />
                 </div>
 
+                {/* SELECT Parcelamento */}
                 <select
-                  // Usa 'parcelamento' para o valor do select
-                  value={lead.parcelamento || ''}
+                  // O valor do select vem do estado local `valores[lead.ID]?.Parcelamento`
+                  value={valores[lead.ID]?.Parcelamento || ''}
                   onChange={(e) => handleParcelamentoChange(lead.ID, e.target.value)}
-                  disabled={!!lead.insurer}
+                  // O select é desabilitado se `lead.Seguradora` já tiver um valor
+                  disabled={!!lead.Seguradora}
                   style={{
                     padding: '8px',
                     border: '1px solid #ccc',
@@ -435,15 +506,19 @@ const LeadsFechados = ({
                   ))}
                 </select>
 
-                {!lead.insurer ? ( // Verifica se 'insurer' está preenchido
+                {/* Botão de Confirmação ou Status Confirmado */}
+                {/* Verifica se lead.Seguradora tem valor para mostrar o status */}
+                {!lead.Seguradora ? (
                   <button
                     onClick={() =>
                       onConfirmInsurer(
                         lead.ID,
-                        parseFloat(lead.premioliquido) || 0, // Garante que é número
-                        lead.insurer, // Valor atual do select
-                        parseFloat(lead.comissao) || 0, // Garante que é número
-                        lead.parcelamento // Valor atual do select
+                        // Converte PremioLiquido de centavos para Reais ao enviar
+                        (valores[lead.ID]?.PremioLiquido || 0) / 100,
+                        valores[lead.ID]?.insurer, // Valor da seguradora do estado local
+                        // Converte Comissão de string com vírgula para float ao enviar
+                        parseFloat(String(valores[lead.ID]?.Comissao || '0').replace(',', '.')),
+                        valores[lead.ID]?.Parcelamento // Valor do parcelamento do estado local
                       )
                     }
                     disabled={isButtonDisabled}
