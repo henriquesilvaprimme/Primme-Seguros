@@ -599,6 +599,7 @@ const App = () => {
     );
   }
 
+  // Define isAdmin fora do JSX para maior clareza e para evitar re-calculo desnecessário
   const isAdmin = usuarioLogado?.tipo === 'Admin';
 
   return (
@@ -613,8 +614,8 @@ const App = () => {
             path="/dashboard"
             element={
               <Dashboard
-                leadsClosed={isAdmin ? leadsFechados : leadsFechados.filter((lead) => String(lead.responsavel) === String(usuarioLogado.nome))}
-                leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel) === String(usuarioLogado.nome))}
+                leadsClosed={isAdmin ? leadsFechados : leadsFechados.filter((lead) => String(lead.responsavel) === String(usuarioLogado?.nome))}
+                leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel) === String(usuarioLogado?.nome))}
                 usuarioLogado={usuarioLogado}
               />
             }
@@ -623,7 +624,7 @@ const App = () => {
             path="/leads"
             element={
               <Leads
-                leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel) === String(usuarioLogado.nome))}
+                leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel) === String(usuarioLogado?.nome))}
                 usuarios={usuarios}
                 onUpdateStatus={atualizarStatusLead}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
@@ -638,11 +639,7 @@ const App = () => {
             path="/leads-fechados"
             element={
               <LeadsFechados
-                // Note: LeadsFechados agora pode usar GOOGLE_SHEETS_LEADS_FECHADOS para buscar dados específicos
-                // Mas no seu App.jsx atual, leadsFechados é um estado filtrado de 'leads'.
-                // Se você quer que LeadsFechados faça um fetch separado, a lógica precisa ser adaptada lá.
-                // Por enquanto, ele continua usando o estado 'leadsFechados' do App.jsx.
-                leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => String(lead.responsavel) === String(usuarioLogado.nome))}
+                leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => String(lead.responsavel) === String(usuarioLogado?.nome))}
                 usuarios={usuarios}
                 onConfirmInsurer={confirmarSeguradoraLead}
                 fetchLeadsFromSheet={fetchLeadsFromSheet} // Ainda pode ser útil para re-fetch geral
@@ -656,7 +653,7 @@ const App = () => {
             path="/leads-perdidos"
             element={
               <LeadsPerdidos
-                leads={isAdmin ? leadsPerdidos : leadsPerdidos.filter((lead) => String(lead.responsavel) === String(usuarioLogado.nome))}
+                leads={isAdmin ? leadsPerdidos : leadsPerdidos.filter((lead) => String(lead.responsavel) === String(usuarioLogado?.nome))}
                 usuarios={usuarios}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
                 onAbrirLead={onAbrirLead}
