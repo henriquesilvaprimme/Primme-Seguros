@@ -32,7 +32,7 @@ const Ranking = ({ usuarios }) => {
     setCarregando(true);
     try {
       const respostaLeads = await fetch(
-        'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec'
+        'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec'
       );
       const dados = await respostaLeads.json();
       setLeads(dados);
