@@ -143,8 +143,10 @@ const App = () => {
         const data = await response.json();
         console.log("Usuários Recebidos:", data);
 
-        if (Array.isArray(data)) {
-          const formattedUsuarios = data.map((item, index) => ({
+        // AQUI: O Apps Script retorna { success: true, data: [...] }
+        // Então, precisamos verificar 'data.success' e 'data.data'
+        if (data.success && Array.isArray(data.data)) {
+          const formattedUsuarios = data.data.map((item, index) => ({ // Acessa data.data
             id: item.id || '',
             usuario: item.usuario || '',
             nome: item.nome || '',
@@ -462,7 +464,6 @@ const App = () => {
     navigate(path);
   };
 
-  // INÍCIO DA INCLUSÃO: handleLogin agora busca usuários diretamente
   const handleLogin = async () => {
     setErroLogin(''); // Limpa mensagens de erro anteriores
     try {
@@ -483,16 +484,15 @@ const App = () => {
         return;
       }
 
-      // Seu Apps Script deve retornar um array diretamente, não um objeto com { success: true, data: [] }
-      // Se o Apps Script retornar { success: true, data: [...] }, você precisaria de data.data
-      if (!Array.isArray(data)) { 
+      // MODIFICAÇÃO AQUI: Verifica se 'success' é true e se 'data' é um array
+      if (!data.success || !Array.isArray(data.data)) { 
         console.warn('API de usuários para login não retornou um array de dados esperado:', data);
         setErroLogin('Erro desconhecido ao carregar usuários para login. Formato de dados inválido.');
         return;
       }
 
-      // Formata os usuários recebidos para o padrão esperado
-      const fetchedUsuarios = data.map((item) => ({
+      // MODIFICAÇÃO AQUI: Acessa o array de usuários através de 'data.data'
+      const fetchedUsuarios = data.data.map((item) => ({ 
         id: String(item.id || ''),
         usuario: String(item.usuario || ''),
         nome: String(item.nome || ''),
@@ -518,7 +518,6 @@ const App = () => {
       setErroLogin('Ocorreu um erro ao tentar fazer login. Verifique sua conexão ou tente novamente.');
     }
   };
-  // FIM DA INCLUSÃO
 
   if (!isAuthenticated) {
     return (
