@@ -15,7 +15,7 @@ import CriarLead from './pages/CriarLead';
 
 // --- ATENÇÃO: ATUALIZE ESTA URL COM A SUA URL DE IMPLANTAÇÃO DO GOOGLE APPS SCRIPT ---
 // Ela deve terminar em /exec e ser pública (implantada como "Web app" com acesso "Anyone")
-const GOOGLE_SHEETS_API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const GOOGLE_SHEETS_API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec';
 
 const App = () => {
   const navigate = useNavigate();
