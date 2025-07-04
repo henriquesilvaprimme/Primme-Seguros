@@ -12,7 +12,7 @@ const CriarLead = ({ adicionarLead }) => {
     vehicleYearModel: '',
     city: '',
     phone: '',
-    insuranceType: 'Novo', // Definido como 'Novo' por padrão
+    insuranceType: ' ', // Definido como ' ' por padrão
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
