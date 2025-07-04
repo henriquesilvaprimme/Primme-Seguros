@@ -13,15 +13,9 @@ import Ranking from './pages/Ranking';
 import CriarLead from './pages/CriarLead';
 
 // --- URLs do Google Apps Script ---
-// URL base da sua nova implantação do Apps Script
 const GOOGLE_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
-
-// URLs específicas usando a base (para GET)
-const GOOGLE_SHEETS_LEADS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=getLeads`; // Para buscar todos os leads (ativos, fechados, perdidos)
-const GOOGLE_SHEETS_USERS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_usuario`; // Para buscar usuários
-
-// URL para ações POST (criar/salvar/transferir/alterar), usando a URL base.
-// A ação será passada no corpo do JSON.
+const GOOGLE_SHEETS_LEADS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=getLeads`;
+const GOOGLE_SHEETS_USERS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_usuario`;
 const GOOGLE_SHEETS_POST_ACTION_URL = `${GOOGLE_SCRIPT_BASE_URL}`;
 
 const App = () => {
@@ -56,49 +50,68 @@ const App = () => {
       }
 
       const data = await response.json();
-      console.log("Dados de Leads Recebidos:", data);
+      console.log("Dados de Leads Recebidos (Crus):", data);
 
       if (Array.isArray(data)) {
-        // Ordena os dados pela data de edição ou criação, do mais recente para o mais antigo
         const sortedData = data.sort((a, b) => {
           const dateA = new Date(a.editado || a.data);
           const dateB = new Date(b.editado || b.data);
           return dateB - dateA;
         });
 
-        const formattedLeads = sortedData.map((item, index) => ({
-          // Padroniza nomes das propriedades para serem consistentes no frontend
-          id: item.id ? String(item.id) : String(index + 1), // ID como string para consistência
-          name: item.name || item.Name || '',
-          vehicleModel: item.vehiclemodel || item.vehicleModel || '',
-          vehicleYearModel: item.vehicleyearmodel || item.vehicleYearModel || '',
-          city: item.city || '',
-          phone: item.phone ? String(item.phone) : (item.Telefone ? String(item.Telefone) : ''), // Garante que telefone seja string
-          insuranceType: item.insurancetype || item.insuranceType || '',
-          status: item.status || 'Selecione o status',
-          confirmado: item.confirmado === 'true' || item.confirmado === true,
-          insurer: item.insurer || '',
-          insurerConfirmed: item.insurerconfirmed === 'true' || item.insurerconfirmed === true,
-          usuarioId: item.usuarioid ? String(item.usuarioid) : null, // ID de usuário como string
-          premioLiquido: item.premioliquido || '',
-          comissao: item.comissao || '',
-          parcelamento: item.parcelamento || '',
-          createdAt: item.data || new Date().toISOString(), // Data de criação
-          responsavel: item.responsavel || '',
-          editado: item.editado || '', // Data da última edição
+        const formattedLeads = sortedData.map((item, index) => {
+          // Função auxiliar para padronizar o acesso a propriedades
+          const getProp = (propNames, defaultValue = '') => {
+            for (const name of propNames) {
+              if (item[name] !== undefined && item[name] !== null) {
+                return item[name];
+              }
+            }
+            return defaultValue;
+          };
 
-          // Mapeamento explícito para as chaves esperadas pelos componentes como LeadsFechados
-          // Garante que LeadsFechados encontre as propriedades esperadas, independentemente da caixa ou nome original do sheet
-          ID: item.id ? String(item.id) : String(index + 1),
-          Data: item.data || new Date().toISOString(),
-          Seguradora: item.insurer || item.Seguradora || '', // 'insurer' ou 'Seguradora'
-          PremioLiquido: item.premioliquido || item.PremioLiquido || '',
-          Comissao: item.comissao || item.Comissao || '',
-          Parcelamento: item.parcelamento || item.Parcelamento || '',
-          Responsavel: item.responsavel || item.Responsavel || '',
-          Telefone: item.phone ? String(item.phone) : (item.Telefone ? String(item.Telefone) : ''), // Telefone também para LeadsFechados
-          Nome: item.name || item.Name || '', // Nome também para LeadsFechados
-        }));
+          return {
+            // Padroniza todas as chaves para camelCase e garante os tipos corretos
+            id: String(getProp(['id'], String(index + 1))),
+            name: getProp(['name', 'Name']),
+            vehicleModel: getProp(['vehiclemodel', 'vehicleModel']),
+            vehicleYearModel: getProp(['vehicleyearmodel', 'vehicleYearModel']),
+            city: getProp(['city']),
+            phone: String(getProp(['phone', 'Telefone'])), // Garante que telefone seja string
+            insuranceType: getProp(['insurancetype', 'insuranceType']),
+            status: getProp(['status'], 'Selecione o status'),
+            confirmado: getProp(['confirmado']) === 'true' || getProp(['confirmado']) === true,
+            insurer: getProp(['insurer', 'Seguradora']), // Agora 'insurer' ou 'Seguradora' é o campo principal
+            insurerConfirmed: getProp(['insurerconfirmed']) === 'true' || getProp(['insurerconfirmed']) === true,
+            usuarioId: String(getProp(['usuarioid'], '')),
+            
+            // Para Prêmio Líquido, Comissão, Parcelamento:
+            // Preferimos que o valor seja numérico ou vazio para manipulação.
+            // Para 'PremioLiquido' e 'Comissao', o Sheets pode retornar como string,
+            // então usamos parseFloat e tratamos NaN.
+            premioLiquido: parseFloat(String(getProp(['premioliquido', 'PremioLiquido'], '0')).replace(',', '.')) || 0,
+            comissao: parseFloat(String(getProp(['comissao', 'Comissao'], '0')).replace(',', '.')) || 0,
+            parcelamento: getProp(['parcelamento', 'Parcelamento']),
+
+            createdAt: getProp(['data'], new Date().toISOString()),
+            responsavel: getProp(['responsavel', 'Responsavel']),
+            editado: getProp(['editado']),
+
+            // *** IMPORTANTE: Mapeamento explícito para as chaves esperadas pelo `LeadsFechados` ***
+            // Isso garante que o componente `LeadsFechados` encontre as propriedades
+            // com as chaves exatas que ele espera (ex: `ID`, `Data`, `Seguradora`, `PremioLiquido`, etc.)
+            // que foram definidas no código LeadsFechados.jsx que você enviou.
+            ID: String(getProp(['id'], String(index + 1))), // ID do lead
+            Data: getProp(['data'], new Date().toISOString()).split('T')[0], // Apenas a data (AAAA-MM-DD)
+            Seguradora: getProp(['insurer', 'Seguradora']),
+            PremioLiquido: parseFloat(String(getProp(['premioliquido', 'PremioLiquido'], '0')).replace(',', '.')) || 0,
+            Comissao: parseFloat(String(getProp(['comissao', 'Comissao'], '0')).replace(',', '.')) || 0,
+            Parcelamento: getProp(['parcelamento', 'Parcelamento']),
+            Responsavel: getProp(['responsavel', 'Responsavel']),
+            Telefone: String(getProp(['phone', 'Telefone'])),
+            Status: getProp(['status'], 'Selecione o status'), // 'Status' com S maiúsculo
+          };
+        });
 
         console.log("Leads Formatados para estado global:", formattedLeads);
         setLeads(formattedLeads); // Atualiza o estado principal com todos os leads
@@ -110,7 +123,7 @@ const App = () => {
       console.error('Erro ao buscar leads do Google Sheets:', error);
       setLeads([]);
     }
-  }, []); // Dependências vazias, pois a URL é constante e não há dependências de estado
+  }, []);
 
   // Função para buscar usuários do Google Sheet
   const fetchUsuariosFromSheet = useCallback(async () => {
@@ -146,7 +159,7 @@ const App = () => {
       console.error('Erro ao buscar usuários do Google Sheets (Frontend):', error);
       setUsuarios([]);
     }
-  }, []); // Dependências vazias
+  }, []);
 
   // Efeitos para buscar dados periodicamente
   useEffect(() => {
@@ -176,7 +189,7 @@ const App = () => {
     // Otimisticamente atualiza o estado local para resposta rápida da UI
     setLeads((prev) =>
       prev.map((lead) =>
-        String(lead.phone) === String(phone) ? { ...lead, status: novoStatus, confirmado: true } : lead
+        String(lead.phone) === String(phone) ? { ...lead, status: novoStatus, Status: novoStatus, confirmado: true } : lead
       )
     );
 
@@ -190,7 +203,7 @@ const App = () => {
       console.log("Enviando atualização de status do lead (POST com no-cors):", payload);
       await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
-        mode: 'no-cors', // Mantido no-cors
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -199,22 +212,62 @@ const App = () => {
 
       console.log("Requisição de atualização de status do lead enviada. Verifique os logs do GAS.");
 
-      // Forçamos o refresh dos dados após um pequeno delay
       setTimeout(() => {
-        fetchLeadsFromSheet(); // Este fetch agora buscará todos os leads, incluindo os fechados/perdidos
+        fetchLeadsFromSheet();
       }, 100);
 
     } catch (error) {
       console.error('Erro ao enviar atualização de status do lead:', error);
       alert('Erro de rede ao atualizar status do lead. Por favor, tente novamente.');
-      fetchLeadsFromSheet(); // Reverte o estado visual em caso de erro de rede
+      fetchLeadsFromSheet();
     }
+  };
+
+  // NOVA FUNÇÃO: Atualiza um detalhe específico do lead fechado
+  // (Prêmio Líquido, Comissão, Parcelamento, Seguradora temporária)
+  const onUpdateDetalhesFechados = async (id, campo, valor) => {
+    // Atualiza otimisticamente o estado local
+    setLeads((prevLeads) =>
+      prevLeads.map((lead) => {
+        if (String(lead.ID) === String(id)) {
+          // Mapeia o nome do campo recebido para a chave correta no estado
+          const updatedLead = { ...lead };
+          switch (campo) {
+            case 'PremioLiquido':
+              updatedLead.PremioLiquido = valor;
+              updatedLead.premioliquido = valor; // Também atualiza a chave camelCase
+              break;
+            case 'Comissao':
+              updatedLead.Comissao = valor;
+              updatedLead.comissao = valor; // Também atualiza a chave camelCase
+              break;
+            case 'Parcelamento':
+              updatedLead.Parcelamento = valor;
+              updatedLead.parcelamento = valor; // Também atualiza a chave camelCase
+              break;
+            case 'Seguradora': // Para o caso de atualizarmos a seguradora antes da confirmação final
+              updatedLead.Seguradora = valor;
+              updatedLead.insurer = valor;
+              break;
+            default:
+              break;
+          }
+          return updatedLead;
+        }
+        return lead;
+      })
+    );
+
+    // Nota: Esta função não faz um POST direto para o Sheets.
+    // Ela apenas atualiza o estado local. O POST para o Sheets
+    // acontece apenas quando `confirmarSeguradoraLead` é chamada.
+    // Isso é importante para evitar múltiplos envios para o Sheets
+    // a cada digitação/seleção.
   };
 
 
   // Função para confirmar seguradora do lead (COM no-cors)
   const confirmarSeguradoraLead = async (id, premioLiquido, seguradora, comissao, parcelamento) => {
-    // Encontrar o lead correto no estado 'leads' (a única fonte de verdade)
     const leadToUpdate = leads.find((l) => String(l.ID) === String(id) || String(l.id) === String(id));
 
     if (!leadToUpdate) {
@@ -222,7 +275,7 @@ const App = () => {
       return;
     }
 
-    // Otimisticamente atualiza o estado local
+    // Otimisticamente atualiza o estado local (já garantindo que as chaves do Sheet estejam corretas)
     setLeads((prevLeads) =>
       prevLeads.map((l) =>
         String(l.ID) === String(id) || String(l.id) === String(id)
@@ -232,8 +285,8 @@ const App = () => {
               PremioLiquido: premioLiquido,
               Comissao: comissao,
               Parcelamento: parcelamento,
-              insurerConfirmed: true, // Se aplicável
-              // Também atualiza as chaves originais que podem estar sendo usadas
+              insurerConfirmed: true,
+              // As chaves camelCase também são atualizadas para consistência interna
               insurer: seguradora,
               premioliquido: premioLiquido,
               comissao: comissao,
@@ -258,7 +311,7 @@ const App = () => {
       console.log("Enviando confirmação de seguradora (POST com no-cors):", payload);
       await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
-        mode: 'no-cors', // Mantido no-cors
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -267,7 +320,6 @@ const App = () => {
 
       console.log("Requisição de confirmação de seguradora enviada. Verifique os logs do GAS.");
 
-      // Força o refresh de TODOS os leads para garantir a consistência
       setTimeout(() => {
         fetchLeadsFromSheet();
       }, 100);
@@ -275,7 +327,7 @@ const App = () => {
     } catch (error) {
       console.error('Erro ao enviar lead fechado para atualização de seguradora:', error);
       alert('Erro de rede ao confirmar seguradora do lead.');
-      fetchLeadsFromSheet(); // Reverte o estado visual em caso de erro de rede, buscando os dados reais
+      fetchLeadsFromSheet();
     }
   };
 
@@ -294,7 +346,7 @@ const App = () => {
     // Otimisticamente atualiza o estado local
     setLeads((prev) =>
       prev.map((lead) =>
-        String(lead.id) === String(leadId) ? { ...lead, responsavel: responsavelNome } : lead
+        String(lead.id) === String(leadId) ? { ...lead, responsavel: responsavelNome, Responsavel: responsavelNome } : lead
       )
     );
 
@@ -311,13 +363,12 @@ const App = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'no-cors', // Mantido no-cors
+        mode: 'no-cors',
         body: JSON.stringify(payload),
       });
 
       console.log("Requisição de transferência de lead enviada. Verifique os logs do GAS.");
 
-      // Força o refresh de TODOS os leads
       setTimeout(() => {
         fetchLeadsFromSheet();
       }, 100);
@@ -366,13 +417,12 @@ const App = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'no-cors', // Mantido no-cors
+        mode: 'no-cors',
         body: JSON.stringify(payload),
       });
 
       console.log("Requisição de atualização de usuário enviada. Verifique os logs do GAS.");
 
-      // Força o refresh dos usuários
       setTimeout(() => {
         fetchUsuariosFromSheet();
       }, 100);
@@ -496,17 +546,15 @@ const App = () => {
             element={
               <PrivateRoute>
                 <Dashboard
-                  // Filtrando leads fechados para o Dashboard
                   leadsClosed={
                     isAdmin
-                      ? leads.filter(lead => lead.status === 'Fechado')
-                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
+                      ? leads.filter(lead => lead.Status === 'Fechado') // Use 'Status' aqui também
+                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim() && lead.Status === 'Fechado')
                   }
-                  // Passando todos os leads para o Dashboard para que ele possa fazer suas próprias contagens
                   leads={
                     isAdmin
                       ? leads
-                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())
+                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())
                   }
                   usuarioLogado={usuarioLogado}
                 />
@@ -518,10 +566,10 @@ const App = () => {
             element={
               <PrivateRoute>
                 <Leads
-                  leads={isAdmin ? leads : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
+                  leads={isAdmin ? leads : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())}
                   usuarios={usuarios}
                   onUpdateStatus={atualizarStatusLead}
-                  fetchLeadsFromSheet={fetchLeadsFromSheet}
+                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
                   transferirLead={transferirLead}
                   usuarioLogado={usuarioLogado}
                 />
@@ -533,15 +581,15 @@ const App = () => {
             element={
               <PrivateRoute>
                 <LeadsFechados
-                  // Filtrando apenas leads com status 'Fechado' para este componente
                   leads={
                     isAdmin
-                      ? leads.filter(lead => lead.status === 'Fechado')
-                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
+                      ? leads.filter(lead => lead.Status === 'Fechado') // Filtra por 'Status'
+                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim() && lead.Status === 'Fechado')
                   }
                   usuarios={usuarios}
                   onConfirmInsurer={confirmarSeguradoraLead}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
+                  onUpdateDetalhes={onUpdateDetalhesFechados} // Adicionada esta função
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Renomeado para onRefreshLeads na prop, mas a função é fetchLeadsFromSheet
                   isAdmin={isAdmin}
                   onAbrirLead={onAbrirLead}
                   leadSelecionado={leadSelecionado}
@@ -554,14 +602,13 @@ const App = () => {
             element={
               <PrivateRoute>
                 <LeadsPerdidos
-                  // Filtrando apenas leads com status 'Perdido' para este componente
                   leads={
                     isAdmin
-                      ? leads.filter(lead => lead.status === 'Perdido')
-                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Perdido')
+                      ? leads.filter(lead => lead.Status === 'Perdido') // Filtra por 'Status'
+                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim() && lead.Status === 'Perdido')
                   }
                   usuarios={usuarios}
-                  fetchLeadsFromSheet={fetchLeadsFromSheet}
+                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
                   onAbrirLead={onAbrirLead}
                   isAdmin={isAdmin}
                   leadSelecionado={leadSelecionado}
@@ -575,8 +622,7 @@ const App = () => {
               <PrivateRoute>
                 <BuscarLead
                   leads={leads}
-                  fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
+                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
                 />
               </PrivateRoute>
             }
@@ -584,7 +630,7 @@ const App = () => {
 
           <Route
             path="/criar-lead"
-            element={<PrivateRoute><CriarLead adicionarLead={adicionarLead} googleSheetsPostUrl={GOOGLE_SHEETS_POST_ACTION_URL} usuarioLogado={usuarioLogado} fetchLeadsFromSheet={fetchLeadsFromSheet} /></PrivateRoute>}
+            element={<PrivateRoute><CriarLead adicionarLead={adicionarLead} googleSheetsPostUrl={GOOGLE_SHEETS_POST_ACTION_URL} usuarioLogado={usuarioLogado} onRefreshLeads={fetchLeadsFromSheet} /></PrivateRoute>}
           />
 
           {isAdmin && (
@@ -595,10 +641,9 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Usuarios
-                      leads={isAdmin ? leads : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
+                      leads={isAdmin ? leads : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())}
                       usuarios={usuarios}
-                      fetchLeadsFromSheet={fetchLeadsFromSheet}
-                      fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
+                      onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
                       atualizarStatusUsuario={atualizarStatusUsuario}
                     />
                   </PrivateRoute>
@@ -612,8 +657,7 @@ const App = () => {
               <PrivateRoute>
                 <Ranking
                   usuarios={usuarios}
-                  fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
+                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
                   leads={leads}
                 />
               </PrivateRoute>
