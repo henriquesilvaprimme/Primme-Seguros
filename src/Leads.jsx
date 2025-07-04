@@ -4,7 +4,7 @@ import Lead from './components/Lead';
 // A URL GOOGLE_SHEETS_SCRIPT_URL não é usada diretamente neste componente para POSTs,
 // mas é mantida aqui se for usada para GETs ou outras finalidades.
 // As chamadas POST de atualização de leads são feitas via props (transferirLead) que vêm do App.jsx
-const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec';
+const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
 
 const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado, fetchLeadsFromSheet }) => {
   const [selecionados, setSelecionados] = useState({}); // { [leadId]: userId }
