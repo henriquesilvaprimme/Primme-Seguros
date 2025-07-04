@@ -22,7 +22,7 @@ const Dashboard = ({ leads, usuarioLogado }) => {
   const buscarLeads = async () => {
     try {
       const respostaLeads = await fetch(
-        'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec'
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec'
       );
       const dadosLeads = await respostaLeads.json();
       setLeadsClosed(dadosLeads);
