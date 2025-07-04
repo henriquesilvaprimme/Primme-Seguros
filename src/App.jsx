@@ -137,11 +137,8 @@ const App = () => {
   useEffect(() => {
     const fetchUsuariosFromSheet = async () => {
       try {
-        console.log("Tentando buscar usuários da URL:", GOOGLE_SHEETS_USERS + '?v=pegar_usuario');
         const response = await fetch(GOOGLE_SHEETS_USERS + '?v=pegar_usuario');
         const data = await response.json();
-
-        console.log("Dados de usuários recebidos:", data);
 
         if (Array.isArray(data)) {
           // Formata os usuários para o formato esperado pelo aplicativo
@@ -156,10 +153,8 @@ const App = () => {
           }));
 
           setUsuarios(formattedUsuarios);
-          console.log("Usuários formatados e definidos:", formattedUsuarios);
         } else {
           setUsuarios([]);
-          console.log("Dados de usuários não são um array. Definindo como vazio.");
         }
       } catch (error) {
         console.error('Erro ao buscar usuários do Google Sheets:', error);
@@ -222,7 +217,7 @@ const App = () => {
         if (jaExiste) {
           // Se já existe, só atualiza
           const atualizados = prev.map((lead) =>
-            lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
+            leadsFechados.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
           );
           return atualizados;
         } else {
@@ -430,19 +425,14 @@ const App = () => {
 
   // Lida com o processo de login
   const handleLogin = () => {
-    console.log("Tentativa de login com Usuário:", loginInput, "Senha:", senhaInput);
-    console.log("Usuários carregados:", usuarios);
-
     const usuarioEncontrado = usuarios.find(
       (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
     );
 
     if (usuarioEncontrado) {
-      console.log("Usuário encontrado:", usuarioEncontrado);
       setIsAuthenticated(true);
       setUsuarioLogado(usuarioEncontrado);
     } else {
-      console.error('Login ou senha inválidos ou usuário inativo. Usuário encontrado:', usuarioEncontrado);
       alert('Login ou senha inválidos ou usuário inativo.'); // Mantido alert por enquanto, mas considere um modal customizado
     }
   };
