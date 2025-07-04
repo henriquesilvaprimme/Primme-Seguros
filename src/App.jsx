@@ -49,30 +49,26 @@ const App = () => {
       const data = await response.json();
 
       if (!response.ok) {
-          // Se a resposta não for OK (ex: 404, 500), tenta ler a mensagem de erro do corpo
           const errorText = await response.text();
           throw new Error(`Erro na rede ou no servidor ao buscar leads: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       if (Array.isArray(data)) {
-        // Ordena o array por 'data' ou 'editado' decrescente (mais recente primeiro)
-        // Se 'editado' sempre existe e reflete a última modificação/criação, use-o.
-        // Caso contrário, 'data' (supondo que seja a data de criação original) é mais estável para "último recebido".
-        const sortedData = [...data].sort((a, b) => { // Use spread para criar uma cópia e evitar mutação direta
-          const dateA = new Date(a.data || a.editado); // Prefere 'data', fallback para 'editado'
-          const dateB = new Date(b.data || b.editado); // Prefere 'data', fallback para 'editado'
-          return dateB.getTime() - dateA.getTime(); // Ordena do mais recente para o mais antigo
+        const sortedData = [...data].sort((a, b) => {
+          const dateA = new Date(a.data || a.editado);
+          const dateB = new Date(b.data || b.editado);
+          return dateB.getTime() - dateA.getTime();
         });
 
         const formattedLeads = sortedData.map((item, index) => ({
-          id: item.id ? Number(item.id) : index + 1, // Garante que 'id' é um número
+          id: item.id ? Number(item.id) : index + 1,
           name: item.name || item.Name || '',
-          vehicleModel: item.vehiclemodel || '', // Corrigido para consistência
+          vehicleModel: item.vehiclemodel || '',
           vehicleYearModel: item.vehicleyearmodel || '',
           city: item.city || '',
           phone: item.phone || item.Telefone || '',
           insuranceType: item.insurancetype || '',
-          status: item.status || 'Pendente', // Status padrão para novos leads
+          status: item.status || 'Pendente',
           confirmado: item.confirmado === 'true' || item.confirmado === true,
           insurer: item.insurer || '',
           insurerConfirmed: item.insurerConfirmed === 'true' || item.insurerConfirmed === true,
@@ -80,12 +76,11 @@ const App = () => {
           premioLiquido: item.premioLiquido || '',
           comissao: item.comissao || '',
           parcelamento: item.parcelamento || '',
-          data: item.data || new Date().toISOString(), // Usando 'data' para consistência
+          data: item.data || new Date().toISOString(),
           responsavel: item.responsavel || '',
           editado: item.editado || ''
         }));
 
-        // Só atualiza leads se não houver lead selecionado para não atrapalhar o usuário
         if (!leadSelecionado) {
           setLeads(formattedLeads);
         }
@@ -97,21 +92,21 @@ const App = () => {
     } catch (error) {
       console.error('Erro ao buscar leads:', error);
       if (!leadSelecionado) {
-        setLeads([]); // Limpa leads se houver erro e nenhum lead estiver selecionado
+        setLeads([]);
       }
     }
   };
 
   // --- EFEITO PARA BUSCAR LEADS PENDENTES REGULARMENTE ---
   useEffect(() => {
-    fetchLeadsFromSheet(); // Chama na montagem inicial
+    fetchLeadsFromSheet();
 
     const interval = setInterval(() => {
       fetchLeadsFromSheet();
-    }, 60000); // A cada 60 segundos (1 minuto)
+    }, 60000);
 
-    return () => clearInterval(interval); // Limpa o intervalo na desmontagem
-  }, [leadSelecionado]); // leadSelecionado como dependência para controlar o refresh
+    return () => clearInterval(interval);
+  }, [leadSelecionado]);
 
   // --- FUNÇÃO PARA BUSCAR LEADS FECHADOS ---
   const fetchLeadsFechadosFromSheet = async () => {
@@ -123,11 +118,9 @@ const App = () => {
         const errorText = await response.text();
         throw new Error(`Erro ao buscar leads fechados: ${response.status} ${response.statusText} - ${errorText}`);
       }
-      
+
       if (Array.isArray(data)) {
-        // Inverte os leads fechados para que os mais recentes apareçam primeiro, se desejar
-        // Se a ordem de fechamento importa, pode ser necessário um campo 'dataFechamento' no Sheet
-        const reversedFechados = [...data].reverse(); // Exemplo: inverte a ordem de recebimento
+        const reversedFechados = [...data].reverse();
         setLeadsFechados(reversedFechados);
       } else {
         setLeadsFechados([]);
@@ -161,8 +154,8 @@ const App = () => {
       }
 
       if (Array.isArray(data)) {
-        const formattedUsuarios = data.map((item) => ({ // Removido index, pois não é usado para ID aqui
-          id: item.id || '', // Assume que o ID vem do sheet, ou gere um UUID se o sheet não garantir
+        const formattedUsuarios = data.map((item) => ({
+          id: item.id || '',
           usuario: item.usuario || '',
           nome: item.nome || '',
           email: item.email || '',
@@ -194,86 +187,10 @@ const App = () => {
   const [ultimoFechadoId, setUltimoFechadoId] = useState(null); // Estado não usado para o propósito original, considerar remoção ou refatoração
 
   const adicionarUsuario = (usuario) => {
-    // Esta função será melhor implementada enviando para o Sheets e depois re-buscando
-    // Por enquanto, ela apenas adiciona localmente (não persistente sem chamada ao GAS)
-    setUsuarios((prev) => [...prev, { ...usuario, id: crypto.randomUUID() }]); // Garante um ID único
+    setUsuarios((prev) => [...prev, { ...usuario, id: crypto.randomUUID() }]);
   };
 
-  // --- Atualiza status do lead no estado local e envia para o Apps Script ---
-  const atualizarStatusLead = async (id, novoStatus, phone) => {
-    // Encontra o lead no estado atual
-    const leadToUpdate = leads.find((lead) => lead.phone === phone);
-    if (!leadToUpdate) return;
-
-    // Atualiza o estado local imediatamente para uma melhor UX
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
-      )
-    );
-
-    // Lógica para leads fechados, se o status for 'Fechado'
-    if (novoStatus === 'Fechado') {
-      setLeadsFechados((prev) => {
-        const jaExiste = prev.some((lead) => lead.phone === phone);
-
-        if (jaExiste) {
-          // Se já existe, só atualiza
-          return prev.map((lead) =>
-            lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
-          );
-        } else {
-          // Se não existe, adiciona o lead à lista de fechados com os campos ajustados
-          const leadParaAdicionar = {
-            ID: leadToUpdate.id || crypto.randomUUID(),
-            name: leadToUpdate.name,
-            vehicleModel: leadToUpdate.vehicleModel,
-            vehicleYearModel: leadToUpdate.vehicleYearModel,
-            city: leadToUpdate.city,
-            phone: leadToUpdate.phone,
-            insurer: leadToUpdate.insuranceType || '', // Use insuranceType para consistência
-            Data: leadToUpdate.data || new Date().toISOString(), // Use lead.data
-            Responsavel: leadToUpdate.responsavel || '',
-            Status: "Fechado",
-            Seguradora: leadToUpdate.insurer || "", // Mapeia insurer para Seguradora
-            PremioLiquido: leadToUpdate.premioLiquido || "",
-            Comissao: leadToUpdate.comissao || "",
-            Parcelamento: leadToUpdate.parcelamento || "",
-            // Removidas propriedades de usuário, pois não pertencem ao objeto LeadFechado
-            confirmado: true
-          };
-          return [...prev, leadParaAdicionar];
-        }
-      });
-    }
-
-    // Prepara os dados para o Apps Script (POST)
-    const updatedLeadForScript = {
-      ...leadToUpdate,
-      status: novoStatus,
-      confirmado: true,
-      editado: new Date().toISOString(), // Atualiza a data de edição
-    };
-
-    try {
-      await fetch(`${GOOGLE_SHEETS_POST_URL}?v=alterar_status`, { // Verifique se a função do Apps Script é 'alterar_status'
-        method: 'POST',
-        mode: 'no-cors', // Cuidado com 'no-cors' - não permite ler a resposta do servidor
-        body: JSON.stringify({
-          lead: updatedLeadForScript
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      // Após o sucesso da atualização no Apps Script, re-busque os leads para garantir consistência
-      // fetchLeadsFromSheet(); // Chame se precisar de uma sincronização imediata
-    } catch (error) {
-      console.error('Erro ao enviar atualização de status para o Apps Script:', error);
-      // Aqui você pode querer reverter o estado local ou mostrar uma mensagem de erro
-    }
-  };
-
+  // --- Lógica para "limpar" campos de um lead (usado internamente) ---
   const limparCamposLead = (lead) => ({
     ...lead,
     premioLiquido: "",
@@ -281,12 +198,94 @@ const App = () => {
     parcelamento: "",
   });
 
-  // --- Confirma seguradora e envia para o Apps Script (Leads Fechados) ---
+  // --- Atualiza status do lead no estado local e envia para o Apps Script ---
+  const atualizarStatusLead = async (id, novoStatus, phone) => {
+    const leadToUpdate = leads.find((lead) => lead.phone === phone);
+    if (!leadToUpdate) return;
+
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
+      )
+    );
+
+    if (novoStatus === 'Fechado') {
+      setLeadsFechados((prev) => {
+        const jaExiste = prev.some((lead) => lead.phone === phone);
+
+        if (jaExiste) {
+          return prev.map((lead) =>
+            lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
+          );
+        } else {
+          const leadParaAdicionar = {
+            ID: leadToUpdate.id || crypto.randomUUID(),
+            name: leadToUpdate.name,
+            vehicleModel: leadToUpdate.vehicleModel,
+            vehicleYearModel: leadToUpdate.vehicleYearModel,
+            city: leadToUpdate.city,
+            phone: leadToUpdate.phone,
+            insurer: leadToUpdate.insuranceType || '',
+            Data: leadToUpdate.data || new Date().toISOString(),
+            Responsavel: leadToUpdate.responsavel || '',
+            Status: "Fechado",
+            Seguradora: leadToUpdate.insurer || "",
+            PremioLiquido: leadToUpdate.premioLiquido || "",
+            Comissao: leadToUpdate.comissao || "",
+            Parcelamento: leadToUpdate.parcelamento || "",
+            confirmado: true
+          };
+          return [...prev, leadParaAdicionar];
+        }
+      });
+    }
+
+    const updatedLeadForScript = {
+      ...leadToUpdate,
+      status: novoStatus,
+      confirmado: true,
+      editado: new Date().toISOString(),
+    };
+
+    try {
+      await fetch(`${GOOGLE_SHEETS_POST_URL}?v=alterar_status`, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({
+          lead: updatedLeadForScript
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao enviar atualização de status para o Apps Script:', error);
+    }
+  };
+
+  // --- Atualiza a seguradora de um lead (sem confirmar) ---
+  const atualizarSeguradoraLead = (id, seguradora) => {
+    // Esta função deve atualizar a seguradora nos Leads normais,
+    // se o fluxo de negócio permitir que um lead não-fechado tenha seguradora.
+    // Se ela for apenas para leads fechados, talvez precise ajustar a lógica
+    // para LeadsFechados.
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === id
+          ? { ...lead, insurer: seguradora } // Removed limparCamposLead here, as it might not always be desired
+          : lead
+      )
+    );
+    // Nota: Esta função não faz um POST para o Apps Script.
+    // Se você precisar que a atualização da seguradora seja persistida
+    // antes da confirmação, adicione a lógica de fetch aqui.
+  };
+
+  // --- Confirma seguradora e detalhes do lead fechado e envia para o Apps Script ---
   const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
-    const lead = leadsFechados.find((l) => l.ID == id); // Use 'ID' para leads fechados
+    const lead = leadsFechados.find((l) => l.ID == id);
     if (!lead) return;
 
-    // Atualiza os dados do lead no estado local de leadsFechados
     const updatedLeadLocal = {
       ...lead,
       Seguradora: seguradora,
@@ -294,7 +293,6 @@ const App = () => {
       Comissao: comissao,
       Parcelamento: parcelamento,
       insurerConfirmed: true,
-      // dataFechamento: new Date().toISOString() // Adicionar este campo se você rastrear a data de fechamento
     };
 
     setLeadsFechados((prev) =>
@@ -314,18 +312,16 @@ const App = () => {
           'Content-Type': 'application/json',
         },
       });
-      // Após o sucesso da atualização, re-busque leads fechados para sincronizar
-      // fetchLeadsFechadosFromSheet();
     } catch (error) {
       console.error('Erro ao enviar detalhes de seguradora para o Apps Script:', error);
     }
   };
 
+  // --- Atualiza outros detalhes de um lead FECHADO (não a seguradora principal) ---
   const atualizarDetalhesLeadFechado = (id, campo, valor) => {
-    // Isso deve atualizar leadsFechados, não 'leads' principal
     setLeadsFechados((prev) =>
       prev.map((lead) =>
-        lead.ID === id ? { ...lead, [campo]: valor } : lead // Use 'ID'
+        lead.ID === id ? { ...lead, [campo]: valor } : lead
       )
     );
   };
@@ -348,23 +344,21 @@ const App = () => {
       usuarioId = usuario.id;
     }
 
-    // Atualiza o estado local imediatamente
     setLeads((prev) =>
       prev.map((lead) =>
         lead.id === leadId ? { ...lead, responsavel: responsavelNome, usuarioId: usuarioId } : lead
       )
     );
 
-    // Prepara os dados para o Apps Script (POST)
     const updatedLeadForScript = {
       ...leadToUpdate,
       responsavel: responsavelNome,
-      usuarioId: usuarioId, // Garante que o usuarioId também seja enviado
-      editado: new Date().toISOString(), // Atualiza data de edição
+      usuarioId: usuarioId,
+      editado: new Date().toISOString(),
     };
 
     try {
-      await fetch(`${GOOGLE_SHEETS_POST_URL}?v=transferir_lead`, { // Verifique o endpoint correto no GAS
+      await fetch(`${GOOGLE_SHEETS_POST_URL}?v=transferir_lead`, {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -374,7 +368,6 @@ const App = () => {
           'Content-Type': 'application/json',
         },
       });
-      // fetchLeadsFromSheet(); // Re-busque para sincronizar
     } catch (error) {
       console.error('Erro ao transferir lead para o Apps Script:', error);
     }
@@ -385,12 +378,10 @@ const App = () => {
     const usuario = usuarios.find((u) => u.id === id);
     if (!usuario) return;
 
-    // Prepara o objeto para atualização local e para o script
     const updatedUsuario = { ...usuario };
     if (novoStatus !== null) updatedUsuario.status = novoStatus;
     if (novoTipo !== null) updatedUsuario.tipo = novoTipo;
 
-    // Atualiza localmente
     setUsuarios((prev) =>
       prev.map((u) =>
         u.id === id ? updatedUsuario : u
@@ -408,7 +399,6 @@ const App = () => {
           'Content-Type': 'application/json',
         },
       });
-      // fetchUsuariosFromSheet(); // Re-busque para sincronizar, se necessário
     } catch (error) {
       console.error('Erro ao atualizar usuário no Apps Script:', error);
     }
@@ -518,11 +508,10 @@ const App = () => {
             path="/leads"
             element={
               <Leads
-                // 'leads' já está ordenado pelo fetchLeadsFromSheet
                 leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
                 usuarios={usuarios}
                 onUpdateStatus={atualizarStatusLead}
-                fetchLeadsFromSheet={fetchLeadsFromSheet} // Passando a função para o botão de refresh
+                fetchLeadsFromSheet={fetchLeadsFromSheet}
                 transferirLead={transferirLead}
                 usuarioLogado={usuarioLogado}
               />
@@ -534,10 +523,10 @@ const App = () => {
               <LeadsFechados
                 leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)}
                 usuarios={usuarios}
-                onUpdateInsurer={atualizarSeguradoraLead}
+                onUpdateInsurer={atualizarSeguradoraLead} // <-- Esta prop está aqui, certificada!
                 onConfirmInsurer={confirmarSeguradoraLead}
                 onUpdateDetalhes={atualizarDetalhesLeadFechado}
-                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet} // Passando a função para refresh
+                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
                 isAdmin={isAdmin}
                 ultimoFechadoId={ultimoFechadoId}
                 onAbrirLead={onAbrirLead}
@@ -551,7 +540,7 @@ const App = () => {
               <LeadsPerdidos
                 leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
                 usuarios={usuarios}
-                fetchLeadsFromSheet={fetchLeadsFromSheet} // Passando a função para refresh
+                fetchLeadsFromSheet={fetchLeadsFromSheet}
                 onAbrirLead={onAbrirLead}
                 isAdmin={isAdmin}
                 leadSelecionado={leadSelecionado}
