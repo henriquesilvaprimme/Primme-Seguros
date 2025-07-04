@@ -1,31 +1,25 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Users, Search, Trophy, UserPlus, UserCircle, PlusCircle } from 'lucide-react';
+import { Home, Users, Search, Trophy, UserPlus, UserCircle, PlusCircle, LogOut } from 'lucide-react'; // Importei LogOut
 
-// Renomeie a prop para evitar confusão e deixe claro que é o objeto completo do usuário
-const Sidebar = ({ usuarioLogado }) => {
+const Sidebar = ({ usuarioLogado, handleLogout }) => { // Recebe usuarioLogado e handleLogout
 
-  // Adicione um log para depuração
-  console.log('Sidebar - usuarioLogado recebido:', usuarioLogado);
-
-  // Verifique se usuarioLogado existe antes de tentar acessar suas propriedades
   if (!usuarioLogado) {
-    return null; // Ou um loader, ou uma versão simplificada do sidebar se o usuário não estiver logado
+    return null; // Não renderiza o sidebar se não houver usuário logado
   }
 
-  // Agora podemos acessar as propriedades com segurança
   const isAdmin = usuarioLogado.tipo === 'Admin';
   const nomeExibicao = usuarioLogado.nome
     ? usuarioLogado.nome.charAt(0).toUpperCase() + usuarioLogado.nome.slice(1)
-    : 'Usuário'; // Fallback para caso o nome não exista
+    : 'Usuário';
 
   return (
-    <div className="w-64 bg-white shadow-xl border-r border-gray-200 h-full p-6">
-      <h2 className="text-xl font-semibold mb-8">
+    <div className="w-64 bg-white shadow-xl border-r border-gray-200 h-full p-6 flex flex-col"> {/* Adicionei flex-col aqui */}
+      <div className="text-xl font-semibold mb-8 text-center"> {/* Adicionei text-center */}
         Olá, {nomeExibicao}
-      </h2>
+      </div>
 
-      <nav className="flex flex-col gap-4">
+      <nav className="flex flex-col gap-4 flex-grow"> {/* flex-grow para ocupar espaço disponível */}
         <NavLink
           to="/dashboard"
           className={({ isActive }) =>
@@ -140,6 +134,17 @@ const Sidebar = ({ usuarioLogado }) => {
           </>
         )}
       </nav>
+
+      {/* Botão de Logout */}
+      <div className="mt-auto"> {/* mt-auto para empurrar para o final */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-red-100 text-red-600 transition w-full"
+        >
+          <LogOut size={20} />
+          Sair
+        </button>
+      </div>
     </div>
   );
 };
