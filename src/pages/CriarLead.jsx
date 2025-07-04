@@ -8,7 +8,6 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [insuranceType, setInsuranceType] = useState('');
-  const [status, setStatus] = useState('Novo'); // Status inicial
   const [message, setMessage] = useState(''); // Estado para mensagens de feedback
 
   // URL para o Google Apps Script (certifique-se de que esta URL está correta e é para a função de criação)
@@ -41,7 +40,7 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       city: city,
       phone: phone,
       insuranceType: insuranceType,
-      status: status,
+      status: 'Novo', // Status inicial fixo como 'Novo'
       confirmado: false, // Novo lead não está confirmado por padrão
       insurer: '',
       insurerConfirmed: false,
@@ -70,7 +69,7 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       setCity('');
       setPhone('');
       setInsuranceType('');
-      setStatus('Novo'); // Reseta o status para "Novo"
+      // setStatus('Novo'); // Não é mais necessário resetar o status, pois não há campo
       showMessage('Lead criado com sucesso!', 'success');
     } else {
       showMessage('Erro ao criar lead. Tente novamente.', 'error');
@@ -179,27 +178,9 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           <option value="">Selecione o Tipo de Seguro</option>
-          <option value="Auto">Auto</option>
-          <option value="Residencial">Residencial</option>
-          <option value="Vida">Vida</option>
-          <option value="Empresarial">Empresarial</option>
-          <option value="Viagem">Viagem</option>
-          <option value="Outro">Outro</option>
-        </select>
-      </div>
-
-      <div>
-        <label htmlFor="status" className="block text-gray-700">Status Inicial</label>
-        <select
-          id="status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        >
           <option value="Novo">Novo</option>
-          <option value="Em Contato">Em Contato</option>
-          <option value="Qualificado">Qualificado</option>
-          <option value="Não Qualificado">Não Qualificado</option>
+          <option value="Renovação">Renovação</option>
+          <option value="Indicação">Indicação</option>
         </select>
       </div>
 
