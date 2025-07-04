@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react'; // Removemos useEffect, pois não será mais necessário para 'valores'
 
 const LeadsFechados = ({
-  leads, // Esta prop agora contém todos os leads, mas vamos filtrar aqui
+  leads,
   usuarios,
-  onUpdateInsurer, // Não usado diretamente, mas mantido
-  onConfirmInsurer,
-  onUpdateDetalhes, // Não usado diretamente, mas mantido
-  fetchLeadsFechadosFromSheet,
+  // onUpdateInsurer, // Não precisamos mais desta prop separada
+  onConfirmInsurer, // Esta função será o ponto central de atualização
+  // onUpdateDetalhes, // Não precisamos mais desta prop separada
+  fetchLeadsFechadosFromSheet, // Ainda útil para o botão de refresh manual
   isAdmin,
 }) => {
   // Filtramos os leads fechados diretamente da prop 'leads'
@@ -21,32 +21,13 @@ const LeadsFechados = ({
     return `${ano}-${mes}`;
   };
 
-  const [valores, setValores] = useState({}); // Inicializa vazio, será populado no useEffect
-
-  // O useEffect para sincronizar 'valores' com a prop 'leads'
-  useEffect(() => {
-    const novosValores = {};
-    fechados.forEach((lead) => {
-      // Sempre recria o objeto para o lead.ID, garantindo que os dados mais recentes sejam usados
-      novosValores[lead.ID] = {
-        PremioLiquido:
-          lead.PremioLiquido !== undefined
-            ? Math.round(parseFloat(lead.PremioLiquido) * 100)
-            : 0,
-        Comissao: lead.Comissao ? String(lead.Comissao) : '',
-        Parcelamento: lead.Parcelamento || '',
-        insurer: lead.Seguradora || '',
-      };
-    });
-    setValores(novosValores);
-  }, [fechados]); // Depende de 'fechados', que por sua vez depende de 'leads'
-
+  // Os estados para os filtros de input continuam os mesmos
   const [nomeInput, setNomeInput] = useState('');
   const [dataInput, setDataInput] = useState(getMesAnoAtual());
   const [filtroNome, setFiltroNome] = useState('');
   const [filtroData, setFiltroData] = useState(getMesAnoAtual());
 
-  // Estado para controle de atualização
+  // Estado para controle de atualização (para o botão de refresh manual)
   const [atualizando, setAtualizando] = useState(false);
 
   const normalizarTexto = (texto) =>
@@ -60,7 +41,7 @@ const LeadsFechados = ({
     setFiltroNome(nomeInput.trim());
   };
 
-  const aplicarFiltroData = async () => {
+  const aplicarFiltroData = () => {
     setFiltroData(dataInput);
   };
 
@@ -97,121 +78,63 @@ const LeadsFechados = ({
     });
   };
 
-  const handlePremioLiquidoChange = (id, valor) => {
-    const somenteNumeros = valor.replace(/\D/g, '');
-
-    if (somenteNumeros === '') {
-      setValores((prev) => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          PremioLiquido: 0,
-        },
-      }));
-      return;
-    }
-
+  // Funções de tratamento de input que chamarão onConfirmInsurer
+  const handlePremioLiquidoChange = (leadId, currentValue) => {
+    const somenteNumeros = currentValue.replace(/\D/g, '');
     let valorCentavos = parseInt(somenteNumeros, 10);
     if (isNaN(valorCentavos)) valorCentavos = 0;
 
-    setValores((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        PremioLiquido: valorCentavos,
-      },
-    }));
+    // Apenas chame onConfirmInsurer. O App.jsx vai buscar os dados atualizados
+    // e o componente re-renderizará com o novo valor da prop 'leads'.
+    // Importante: onConfirmInsurer deve ser assíncrona e fazer o refresh.
+    onConfirmInsurer(
+      leadId,
+      valorCentavos / 100, // Envia em Reais para o GAS
+      leads.find(l => l.ID === leadId)?.Seguradora || '',
+      leads.find(l => l.ID === leadId)?.Comissao || '',
+      leads.find(l => l.ID === leadId)?.Parcelamento || ''
+    );
   };
 
-  const handlePremioLiquidoBlur = (id) => {
-    const valorCentavos = valores[id]?.PremioLiquido || 0;
-    const valorReais = valorCentavos / 100;
-
-    if (!isNaN(valorReais)) {
-      onConfirmInsurer(
-        id,
-        valorReais,
-        valores[id]?.insurer,
-        valores[id]?.Comissao,
-        valores[id]?.Parcelamento
-      );
-    } else {
-      // Se for inválido, talvez você queira enviar null ou vazio, ou não fazer nada
-      // onConfirmInsurer(id, null, valores[id]?.insurer, valores[id]?.Comissao, valores[id]?.Parcelamento);
-    }
-  };
-
-  const handleComissaoChange = (id, valor) => {
-    // Permite números e uma vírgula opcional seguida de até um dígito
+  const handleComissaoChange = (leadId, currentValue) => {
     const regex = /^(\d{0,2})(,?\d{0,1})?$/;
-    const valorFormatado = valor.replace('.', ','); // Garante uso da vírgula
+    const valorFormatado = currentValue.replace('.', ','); // Garante uso da vírgula
 
     if (valorFormatado === '' || regex.test(valorFormatado)) {
       const valorLimitado = valorFormatado.slice(0, 4);
+      const valorFloat = parseFloat(valorLimitado.replace(',', '.')); // Converte para float para enviar
 
-      setValores((prev) => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          Comissao: valorLimitado,
-        },
-      }));
+      onConfirmInsurer(
+        leadId,
+        leads.find(l => l.ID === leadId)?.PremioLiquido || 0, // Mantém o prêmio líquido existente
+        leads.find(l => l.ID === leadId)?.Seguradora || '',
+        isNaN(valorFloat) ? '' : valorFloat,
+        leads.find(l => l.ID === leadId)?.Parcelamento || ''
+      );
     }
   };
 
-  const handleComissaoBlur = (id) => {
-    const valorComissao = valores[id]?.Comissao || '';
-    const valorFloat = parseFloat(valorComissao.replace(',', '.')); // Converte para float para enviar
-
+  const handleParcelamentoChange = (leadId, currentValue) => {
     onConfirmInsurer(
-      id,
-      valores[id]?.PremioLiquido / 100, // Envia em Reais
-      valores[id]?.insurer,
-      isNaN(valorFloat) ? '' : valorFloat,
-      valores[id]?.Parcelamento
+      leadId,
+      leads.find(l => l.ID === leadId)?.PremioLiquido || 0,
+      leads.find(l => l.ID === leadId)?.Seguradora || '',
+      leads.find(l => l.ID === leadId)?.Comissao || '',
+      currentValue // Novo valor de parcelamento
     );
   };
 
-  const handleParcelamentoChange = (id, valor) => {
-    setValores((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        Parcelamento: valor,
-      },
-    }));
-    // Não chama onConfirmInsurer aqui, apenas no blur
-  };
-
-  const handleParcelamentoBlur = (id) => {
+  const handleInsurerChange = (leadId, currentValue) => {
     onConfirmInsurer(
-      id,
-      valores[id]?.PremioLiquido / 100, // Envia em Reais
-      valores[id]?.insurer,
-      parseFloat(valores[id]?.Comissao?.replace(',', '.')) || '', // Converte para float
-      valores[id]?.Parcelamento
+      leadId,
+      leads.find(l => l.ID === leadId)?.PremioLiquido || 0,
+      currentValue, // Novo valor da seguradora
+      leads.find(l => l.ID === leadId)?.Comissao || '',
+      leads.find(l => l.ID === leadId)?.Parcelamento || ''
     );
   };
 
-  const handleInsurerChange = (id, valor) => {
-    setValores((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        insurer: valor,
-      },
-    }));
-    // Chame onConfirmInsurer aqui se a seleção da seguradora precisar ser salva imediatamente
-    onConfirmInsurer(
-      id,
-      valores[id]?.PremioLiquido / 100, // Envia em Reais
-      valor, // Novo valor da seguradora
-      parseFloat(valores[id]?.Comissao?.replace(',', '.')) || '', // Converte para float
-      valores[id]?.Parcelamento
-    );
-  };
-
-
+  // Styles (mantidos os mesmos)
   const inputWrapperStyle = {
     position: 'relative',
     width: '100%',
@@ -371,14 +294,15 @@ const LeadsFechados = ({
             (u) => u.nome === lead.Responsavel && isAdmin
           );
 
+          // Verifica se todos os campos estão preenchidos para habilitar o botão
           const isButtonDisabled =
-            !valores[lead.ID]?.insurer ||
-            !valores[lead.ID]?.PremioLiquido ||
-            valores[lead.ID]?.PremioLiquido === 0 ||
-            !valores[lead.ID]?.Comissao ||
-            valores[lead.ID]?.Comissao === '' ||
-            !valores[lead.ID]?.Parcelamento ||
-            valores[lead.ID]?.Parcelamento === '';
+            !lead.Seguradora ||
+            !lead.PremioLiquido ||
+            lead.PremioLiquido === 0 ||
+            !lead.Comissao ||
+            lead.Comissao === '' ||
+            !lead.Parcelamento ||
+            lead.Parcelamento === '';
 
           return (
             <div key={lead.ID} style={containerStyle}>
@@ -416,7 +340,7 @@ const LeadsFechados = ({
                 }}
               >
                 <select
-                  value={valores[lead.ID]?.insurer || ''}
+                  value={lead.Seguradora || ''} // Usando o valor direto do lead
                   onChange={(e) => handleInsurerChange(lead.ID, e.target.value)}
                   disabled={!!lead.Seguradora}
                   style={{
@@ -439,11 +363,9 @@ const LeadsFechados = ({
                   <input
                     type="text"
                     placeholder="Prêmio Líquido"
-                    value={formatarMoeda(valores[lead.ID]?.PremioLiquido)}
-                    onChange={(e) =>
-                      handlePremioLiquidoChange(lead.ID, e.target.value)
-                    }
-                    onBlur={() => handlePremioLiquidoBlur(lead.ID)}
+                    // Valor do input vem diretamente da prop lead.PremioLiquido
+                    value={formatarMoeda(Math.round(parseFloat(lead.PremioLiquido || 0) * 100))}
+                    onBlur={(e) => handlePremioLiquidoChange(lead.ID, e.target.value)}
                     disabled={!!lead.Seguradora}
                     style={inputWithPrefixStyle}
                   />
@@ -454,9 +376,9 @@ const LeadsFechados = ({
                   <input
                     type="text"
                     placeholder="Comissão (%)"
-                    value={valores[lead.ID]?.Comissao || ''}
-                    onChange={(e) => handleComissaoChange(lead.ID, e.target.value)}
-                    onBlur={() => handleComissaoBlur(lead.ID)} // Chama onConfirmInsurer no blur
+                    // Valor do input vem diretamente da prop lead.Comissao
+                    value={lead.Comissao || ''}
+                    onBlur={(e) => handleComissaoChange(lead.ID, e.target.value)}
                     disabled={!!lead.Seguradora}
                     maxLength={4}
                     style={inputWithPrefixStyle}
@@ -464,9 +386,8 @@ const LeadsFechados = ({
                 </div>
 
                 <select
-                  value={valores[lead.ID]?.Parcelamento || ''}
+                  value={lead.Parcelamento || ''} // Usando o valor direto do lead
                   onChange={(e) => handleParcelamentoChange(lead.ID, e.target.value)}
-                  onBlur={() => handleParcelamentoBlur(lead.ID)} // Chama onConfirmInsurer no blur
                   disabled={!!lead.Seguradora}
                   style={{
                     padding: '8px',
@@ -485,18 +406,16 @@ const LeadsFechados = ({
                 </select>
 
                 {!lead.Seguradora ? (
+                  // O botão de "Confirmar Seguradora" deve ser clicado apenas se todos os campos estiverem preenchidos e válidos.
+                  // Sua lógica de onConfirmInsurer deve ser a que salva todos os 4 campos de uma vez.
                   <button
                     onClick={() =>
                       onConfirmInsurer(
                         lead.ID,
-                        parseFloat(
-                          valores[lead.ID]?.PremioLiquido
-                            .toString()
-                            .replace('.', ',') // Garante que é um número decimal
-                        ) / 100, // Divide por 100 para transformar em reais
-                        valores[lead.ID]?.insurer,
-                        parseFloat(valores[lead.ID]?.Comissao?.replace(',', '.')) || '', // Converte para float
-                        valores[lead.ID]?.Parcelamento
+                        parseFloat(lead.PremioLiquido),
+                        lead.Seguradora,
+                        parseFloat(lead.Comissao),
+                        lead.Parcelamento
                       )
                     }
                     disabled={isButtonDisabled}
