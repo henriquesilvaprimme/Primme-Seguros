@@ -1,201 +1,181 @@
 import React, { useState } from 'react';
 
-// Use a mesma URL base que definimos no App.jsx para criação de leads.
-// Certifique-se de que esta URL aponte para o seu Apps Script e que ele saiba como
-// lidar com a 'action=criar_lead' no método doPost.
-const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?action=criar_lead'; // Mantenha sua URL real aqui
-
 const CriarLead = ({ adicionarLead }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    vehicleModel: '',
-    vehicleYearModel: '',
-    city: '',
-    phone: '',
-    insuranceType: ' ', // Definido como ' ' por padrão
-  });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  // Estados para armazenar os dados do novo lead
+  const [nomeLead, setNomeLead] = useState('');
+  const [emailLead, setEmailLead] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [empresa, setEmpresa] = useState('');
+  const [origem, setOrigem] = useState(''); // Ex: "Site", "Telefone", "Indicação"
+  const [status, setStatus] = useState('Novo'); // Ex: "Novo", "Em Contato", "Qualificado"
+  const [message, setMessage] = useState(''); // Estado para mensagens de feedback
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Função para exibir mensagens ao usuário
+  const showMessage = (msg) => {
+    setMessage(msg);
+    // Limpa a mensagem após 3 segundos
+    setTimeout(() => {
+      setMessage('');
+    }, 3000);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
+  // Lida com a criação do lead
+  const handleCriar = async () => {
+    // Valida se todos os campos obrigatórios estão preenchidos
+    if (!nomeLead || !emailLead || !telefone || !empresa || !origem) {
+      showMessage('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
 
-    // Gera um ID simples baseado no timestamp atual (para simular um ID único)
-    const newId = new Date().getTime();
-    // Pega a data e hora atual no formato ISO (pode ser ajustado conforme a necessidade do Sheets)
-    const currentDate = new Date().toISOString();
-
-    // Cria o objeto do novo lead com as colunas especificadas
-    const newLead = {
-      ID: newId,
-      name: formData.name,
-      vehicleModel: formData.vehicleModel,
-      vehicleYearModel: formData.vehicleYearModel,
-      city: formData.city,
-      phone: formData.phone,
-      insuranceType: formData.insuranceType, // Agora virá do select
-      data: currentDate, // Coluna 'data'
-      status: 'Novo',
-      confirmado: false,
-      insurer: '',
-      insurerConfirmed: false,
-      usuarioId: null,
-      premioLiquido: '',
-      comissao: '',
-      parcelamento: '',
-      responsavel: '',
-      editado: currentDate // Data de criação como data de edição inicial
+    // Cria o objeto do novo lead
+    const novoLead = {
+      id: Date.now(), // ID único baseado no timestamp
+      nome: nomeLead,
+      email: emailLead,
+      telefone: telefone,
+      empresa: empresa,
+      origem: origem,
+      status: status,
+      dataCriacao: new Date().toISOString(), // Data de criação do lead
     };
 
+    // Chama a função para enviar o lead para o Google Apps Script
+    await criarLeadFunc(novoLead);
+
+    // Adiciona o lead à lista local (se houver uma função para isso)
+    if (adicionarLead) {
+      adicionarLead(novoLead);
+    }
+
+    // Limpa os campos do formulário
+    setNomeLead('');
+    setEmailLead('');
+    setTelefone('');
+    setEmpresa('');
+    setOrigem('');
+    setStatus('Novo'); // Reseta o status para "Novo"
+    showMessage('Lead criado com sucesso!');
+  };
+
+  // Função assíncrona para enviar os dados do lead para o Google Apps Script
+  const criarLeadFunc = async (lead) => {
     try {
-      // Faz a chamada para o Apps Script
-      const response = await fetch(GOOGLE_SHEETS_LEAD_CREATION_URL, {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?v=criar_lead', {
         method: 'POST',
-        mode: 'no-cors', // Necessário para evitar erros CORS com Apps Script
+        mode: 'no-cors', // Importante para evitar problemas de CORS com o Google Apps Script
+        body: JSON.stringify(lead), // Converte o objeto lead para JSON
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newLead), // Envia o objeto do lead
       });
-
-      setMessage('✅ Lead criado com sucesso!');
-      setFormData({
-        name: '',
-        vehicleModel: '',
-        vehicleYearModel: '',
-        city: '',
-        phone: '',
-        insuranceType: ' ', // Reseta para ' ' após o envio
-      });
-      // Adiciona o novo lead à lista no estado global do App.jsx
-      adicionarLead(newLead);
-
+      // Em modo 'no-cors', a resposta não pode ser lida.
+      // console.log("Resposta do GAS (no-cors):", response);
     } catch (error) {
-      console.error('Erro ao enviar lead:', error);
-      setMessage('Erro ao criar lead. Tente novamente.');
-    } finally {
-      setLoading(false);
+      console.error('Erro ao enviar lead para o Google Apps Script:', error);
+      showMessage('Erro ao criar lead. Tente novamente.');
     }
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Criar Novo Lead</h1>
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-lg mx-auto">
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">
-              Nome do Cliente:
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
-          </div>
+    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
+      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
 
-          <div className="mb-4">
-            <label htmlFor="vehicleModel" className="block text-gray-700 text-sm font-bold mb-2">
-              Modelo do Veículo:
-            </label>
-            <input
-              type="text"
-              id="vehicleModel"
-              name="vehicleModel"
-              value={formData.vehicleModel}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
-          </div>
+      {/* Mensagem de feedback */}
+      {message && (
+        <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg" role="alert">
+          <p className="font-bold">Informação</p>
+          <p>{message}</p>
+        </div>
+      )}
 
-          <div className="mb-4">
-            <label htmlFor="vehicleYearModel" className="block text-gray-700 text-sm font-bold mb-2">
-              Ano/Modelo do Veículo:
-            </label>
-            <input
-              type="text"
-              id="vehicleYearModel"
-              name="vehicleYearModel"
-              value={formData.vehicleYearModel}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
-          </div>
+      <div>
+        <label htmlFor="nomeLead" className="block text-gray-700">Nome do Lead</label>
+        <input
+          id="nomeLead"
+          type="text"
+          value={nomeLead}
+          onChange={(e) => setNomeLead(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Nome completo do lead"
+        />
+      </div>
 
-          <div className="mb-4">
-            <label htmlFor="city" className="block text-gray-700 text-sm font-bold mb-2">
-              Cidade:
-            </label>
-            <input
-              type="text"
-              id="city"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
-          </div>
+      <div>
+        <label htmlFor="emailLead" className="block text-gray-700">Email</label>
+        <input
+          id="emailLead"
+          type="email"
+          value={emailLead}
+          onChange={(e) => setEmailLead(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="email@exemplo.com"
+        />
+      </div>
 
-          <div className="mb-4">
-            <label htmlFor="phone" className="block text-gray-700 text-sm font-bold mb-2">
-              Telefone:
-            </label>
-            <input
-              type="text"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="(XX) XXXXX-XXXX"
-              required
-            />
-          </div>
+      <div>
+        <label htmlFor="telefone" className="block text-gray-700">Telefone</label>
+        <input
+          id="telefone"
+          type="tel"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="(XX) XXXXX-XXXX"
+        />
+      </div>
 
-          <div className="mb-6">
-            <label htmlFor="insuranceType" className="block text-gray-700 text-sm font-bold mb-2">
-              Tipo de Seguro:
-            </label>
-            <select
-              id="insuranceType"
-              name="insuranceType"
-              value={formData.insuranceType}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            >
-              <option value=" "> </option>
-              <option value="Novo">Novo</option>
-              <option value="Renovação">Renovação</option>
-              <option value="Indicação">Indicação</option>
-            </select>
-          </div>
+      <div>
+        <label htmlFor="empresa" className="block text-gray-700">Empresa</label>
+        <input
+          id="empresa"
+          type="text"
+          value={empresa}
+          onChange={(e) => setEmpresa(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="Nome da empresa"
+        />
+      </div>
 
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            disabled={loading}
-          >
-            {loading ? 'Criando...' : 'Criar Lead'}
-          </button>
-        </form>
-        {message && (
-          <p className="mt-4 text-center text-sm font-semibold text-gray-700">{message}</p>
-        )}
+      <div>
+        <label htmlFor="origem" className="block text-gray-700">Origem</label>
+        <select
+          id="origem"
+          value={origem}
+          onChange={(e) => setOrigem(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+          <option value="">Selecione a Origem</option>
+          <option value="Site">Site</option>
+          <option value="Telefone">Telefone</option>
+          <option value="Indicação">Indicação</option>
+          <option value="Campanha Marketing">Campanha de Marketing</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="status" className="block text-gray-700">Status</label>
+        <select
+          id="status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+          <option value="Novo">Novo</option>
+          <option value="Em Contato">Em Contato</option>
+          <option value="Qualificado">Qualificado</option>
+          <option value="Não Qualificado">Não Qualificado</option>
+          <option value="Convertido">Convertido</option>
+        </select>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleCriar}
+          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
+        >
+          Criar Lead
+        </button>
       </div>
     </div>
   );
