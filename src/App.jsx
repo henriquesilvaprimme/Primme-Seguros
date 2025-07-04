@@ -10,17 +10,20 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
-import CriarLead from './pages/CriarLead';
+import CriarLead from './pages/CriarLead'; // Importa o novo componente CriarLead
 
-// --- Novas Constantes ---
+//const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeZteouyVWzrCvgHHQttx-5Bekgs_k-5EguO9Sn2p-XFrivFg9S7_gGKLdoDfCa08/exec';
+
 const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
 const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
-const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados';
+const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados'
+
+// Esta é a URL que o CriarLead.jsx usará.
+// Certifique-se de que este seja o endpoint POST do seu Google Apps Script que lida com a criação de leads.
+// Ele deve ser o mesmo domínio base das outras URLs, mas sem o "?v=" específico.
+// No seu Apps Script, o doPost deve ter uma lógica para 'action=criar_lead'
 const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead';
 
-// Adicionada a URL do novo App Web
-const GOOGLE_SHEETS_APP_WEB_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
-// --- Fim Novas Constantes ---
 
 const App = () => {
   const navigate = useNavigate();
@@ -392,4 +395,255 @@ const App = () => {
       leadParaTransferir.responsavel = responsavelNome;
 
       // Usa a URL base do Apps Script com o parâmetro 'action=transferir_lead'
-      await fetch(`${GOOGLE_
+      await fetch(`${GOOGLE_SHEETS_LEAD_CREATION_URL.split('?')[0]}?action=transferir_lead`, { // Pega a URL base
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ lead: leadParaTransferir }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log(`Lead ${leadId} transferido para ${responsavelNome || 'Ninguém'} no Sheets.`);
+      fetchLeadsFromSheet();
+    } catch (error) {
+      console.error('Erro ao transferir lead no Sheets:', error);
+      alert('Erro ao transferir lead no servidor.');
+    }
+  };
+
+
+  const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
+    const usuario = usuarios.find((usuario) => usuario.id === id);
+    if (!usuario) return;
+
+    const usuarioAtualizado = { ...usuario };
+    if (novoStatus !== null) usuarioAtualizado.status = novoStatus;
+    if (novoTipo !== null) usuarioAtualizado.tipo = novoTipo;
+
+    try {
+      // Usa a URL base do Apps Script com o parâmetro 'action=salvar_usuario'
+      await fetch(`${GOOGLE_SHEETS_LEAD_CREATION_URL.split('?')[0]}?action=salvar_usuario`, { // Pega a URL base
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({
+          usuario: usuarioAtualizado
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log(`Status/Tipo do usuário ${id} atualizado no Sheets.`);
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? {
+                ...u,
+                ...(novoStatus !== null ? { status: novoStatus } : {}),
+                ...(novoTipo !== null ? { tipo: novoTipo } : {}),
+              }
+            : u
+        )
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar status/tipo do usuário no Sheets:', error);
+      alert('Erro ao atualizar status/tipo do usuário no servidor.');
+    }
+  };
+
+
+  const onAbrirLead = (lead) => {
+    setLeadSelecionado(lead);
+
+    let path = '/leads';
+    if (lead.status === 'Fechado') path = '/leads-fechados';
+    else if (lead.status === 'Perdido') path = '/leads-perdidos';
+
+    navigate(path);
+  };
+
+  const handleLogin = () => {
+    const usuarioEncontrado = usuarios.find(
+      (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
+    );
+
+    if (usuarioEncontrado) {
+      setIsAuthenticated(true);
+      setUsuarioLogado(usuarioEncontrado);
+    } else {
+      alert('Login ou senha inválidos ou usuário inativo.');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div
+        className={`flex items-center justify-center min-h-screen bg-cover bg-center transition-opacity duration-1000 ${
+          backgroundLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          backgroundImage: `url('/background.png')`,
+        }}
+      >
+        <div className="bg-blue-900 bg-opacity-60 text-white p-10 rounded-2xl shadow-2xl w-full max-w-sm">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-12 h-12 mb-2 flex items-center justify-center text-4xl text-yellow-400">
+              👑
+            </div>
+            <h1 className="text-xl font-semibold">GRUPO</h1>
+            <h2 className="text-2xl font-bold text-white">PRIMME SEGUROS</h2>
+            <p className="text-sm text-white">CORRETORA DE SEGUROS</p>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Usuário"
+            value={loginInput}
+            onChange={(e) => setLoginInput(e.target.value)}
+            className="w-full mb-4 px-4 py-2 rounded text-black"
+          />
+          <input
+            type="password"
+            placeholder="Senha"
+            value={senhaInput}
+            onChange={(e) => setSenhaInput(e.target.value)}
+            className="w-full mb-2 px-4 py-2 rounded text-black"
+          />
+          <div className="text-right text-sm mb-4">
+            <a href="#" className="text-white underline">
+              Esqueci minha senha
+            </a>
+          </div>
+          <button
+            onClick={handleLogin}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            ENTRAR
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isAdmin = usuarioLogado?.tipo === 'Admin';
+
+  return (
+    <div style={{ display: 'flex', height: '100vh' }}>
+      <Sidebar isAdmin={isAdmin} nomeUsuario={usuarioLogado} />
+
+      <main style={{ flex: 1, overflow: 'auto' }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <Dashboard
+                leadsClosed={
+                  isAdmin
+                    ? leadsFechados
+                    : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
+                }
+                leads={
+                  isAdmin
+                    ? leads
+                    : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
+                }
+                usuarioLogado={usuarioLogado}
+              />
+            }
+          />
+          <Route
+            path="/leads"
+            element={
+              <Leads
+                leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                usuarios={usuarios}
+                onUpdateStatus={atualizarStatusLead}
+                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                transferirLead={transferirLead}
+                usuarioLogado={usuarioLogado}
+              />
+            }
+          />
+          <Route
+            path="/leads-fechados"
+            element={
+              <LeadsFechados
+                leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)}
+                usuarios={usuarios}
+                onUpdateInsurer={atualizarSeguradoraLead}
+                onConfirmInsurer={confirmarSeguradoraLead}
+                onUpdateDetalhes={atualizarDetalhesLeadFechado}
+                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                isAdmin={isAdmin}
+                ultimoFechadoId={ultimoFechadoId}
+                onAbrirLead={onAbrirLead}
+                leadSelecionado={leadSelecionado}
+              />
+            }
+          />
+          <Route
+            path="/leads-perdidos"
+            element={
+              <LeadsPerdidos
+                leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                usuarios={usuarios}
+                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                onAbrirLead={onAbrirLead}
+                isAdmin={isAdmin}
+                leadSelecionado={leadSelecionado}
+              />
+            }
+          />
+          <Route
+            path="/buscar-lead"
+            element={
+              <BuscarLead
+                leads={leads}
+                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+              />
+            }
+          />
+
+          {/* Rota para Criar Lead */}
+          <Route
+            path="/criar-lead"
+            element={<CriarLead adicionarLead={adicionarLead} />} // Passa a função adicionarLead
+          />
+
+          {isAdmin && (
+            <>
+              <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
+              <Route
+                path="/usuarios"
+                element={
+                  <Usuarios
+                    leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                    usuarios={usuarios}
+                    fetchLeadsFromSheet={fetchLeadsFromSheet}
+                    fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                    atualizarStatusUsuario={atualizarStatusUsuario}
+                  />
+                }
+              />
+            </>
+          )}
+          <Route
+            path="/ranking"
+            element={
+              <Ranking
+                usuarios={usuarios}
+                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                leads={leads}
+              />
+            }
+          />
+          <Route path="*" element={<h1 style={{ padding: 20 }}>Página não encontrada</h1>} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
+export default App;
