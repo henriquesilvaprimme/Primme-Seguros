@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 
-// Nova URL do Google Apps Script
-const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec?action=criar_lead';
+// Use a mesma URL base que definimos no App.jsx para criação de leads.
+// Certifique-se de que esta URL aponte para o seu Apps Script e que ele saiba como
+// lidar com a 'action=criar_lead' no método doPost.
+const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead'; // Mantenha sua URL real aqui
 
 const CriarLead = ({ adicionarLead }) => {
   const [formData, setFormData] = useState({
@@ -32,7 +34,7 @@ const CriarLead = ({ adicionarLead }) => {
 
     // Cria o objeto do novo lead com as colunas especificadas
     const newLead = {
-      ID: newId, // Usando ID para o Apps Script
+      ID: newId,
       name: formData.name,
       vehicleModel: formData.vehicleModel,
       vehicleYearModel: formData.vehicleYearModel,
@@ -53,7 +55,7 @@ const CriarLead = ({ adicionarLead }) => {
     };
 
     try {
-      // Faz a chamada para o Apps Script usando a URL atualizada
+      // Faz a chamada para o Apps Script
       const response = await fetch(GOOGLE_SHEETS_LEAD_CREATION_URL, {
         method: 'POST',
         mode: 'no-cors', // Necessário para evitar erros CORS com Apps Script
@@ -63,8 +65,6 @@ const CriarLead = ({ adicionarLead }) => {
         body: JSON.stringify(newLead), // Envia o objeto do lead
       });
 
-      // Como estamos usando 'no-cors', não podemos ler a resposta diretamente.
-      // Assumimos o sucesso e mostramos a mensagem.
       setMessage('✅ Lead criado com sucesso!');
       setFormData({
         name: '',
