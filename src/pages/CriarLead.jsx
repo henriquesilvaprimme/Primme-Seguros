@@ -40,17 +40,18 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       city: city,
       phone: phone,
       insuranceType: insuranceType,
-      status: 'Novo', // Status inicial fixo como 'Novo'
-      confirmado: false, // Novo lead não está confirmado por padrão
+      // Os campos abaixo serão enviados como vazios/nulos, conforme solicitado
+      status: '', // Definido como string vazia para ser criado em branco na planilha
+      confirmado: false,
       insurer: '',
       insurerConfirmed: false,
-      usuarioId: usuarioLogado ? usuarioLogado.id : null, // Associa o ID do usuário logado
+      usuarioId: null, // Definido como null para ser criado em branco na planilha
       premioLiquido: '',
       comissao: '',
       parcelamento: '',
-      createdAt: now.toISOString(), // Data de criação
-      responsavel: usuarioLogado ? usuarioLogado.nome : 'Não Atribuído', // Atribui o responsável pelo lead
-      editado: now.toISOString() // Data da última edição (agora na criação)
+      createdAt: '', // Definido como string vazia para ser criado em branco na planilha
+      responsavel: '', // Definido como string vazia para ser criado em branco na planilha
+      editado: '' // Definido como string vazia para ser criado em branco na planilha
     };
 
     // Envia o lead para o Google Apps Script
@@ -69,7 +70,6 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       setCity('');
       setPhone('');
       setInsuranceType('');
-      // setStatus('Novo'); // Não é mais necessário resetar o status, pois não há campo
       showMessage('Lead criado com sucesso!', 'success');
     } else {
       showMessage('Erro ao criar lead. Tente novamente.', 'error');
@@ -178,9 +178,12 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           <option value="">Selecione o Tipo de Seguro</option>
-          <option value="Novo">Novo</option>
-          <option value="Renovação">Renovação</option>
-          <option value="Indicação">Indicação</option>
+          <option value="Auto">Auto</option>
+          <option value="Residencial">Residencial</option>
+          <option value="Vida">Vida</option>
+          <option value="Empresarial">Empresarial</option>
+          <option value="Viagem">Viagem</option>
+          <option value="Outro">Outro</option>
         </select>
       </div>
 
