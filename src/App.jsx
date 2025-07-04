@@ -13,9 +13,9 @@ import Ranking from './pages/Ranking';
 import CriarLead from './pages/CriarLead'; // Importa o novo componente CriarLead
 
 // URLs para o Google Apps Script
-const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
-const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
-const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados';
+const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
+const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados';
 
 const App = () => {
   const navigate = useNavigate();
@@ -300,7 +300,7 @@ const App = () => {
 
     try {
       // Faz a chamada para o Apps Script via fetch POST
-      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_seguradora', {
+      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_seguradora', {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -325,7 +325,9 @@ const App = () => {
   };
 
   // Função para transferir um lead para outro responsável
-  const transferirLead = (leadId, responsavelId) => {
+  const transferirLead = async (leadId, responsavelId) => { // Tornar a função assíncrona
+    let newResponsavelName = '';
+
     if (responsavelId === null) {
       // Se for null, desatribui o responsável
       setLeads((prev) =>
@@ -333,22 +335,41 @@ const App = () => {
           lead.id === leadId ? { ...lead, responsavel: null } : lead
         )
       );
-      return;
+      newResponsavelName = ''; // Define como vazio para enviar ao GAS
+    } else {
+      // Busca o usuário normalmente se responsavelId não for null
+      let usuario = usuarios.find((u) => u.id === responsavelId);
+
+      if (!usuario) {
+        console.warn("Usuário não encontrado para transferência de lead.");
+        return;
+      }
+      newResponsavelName = usuario.nome;
+
+      setLeads((prev) =>
+        prev.map((lead) =>
+          lead.id === leadId ? { ...lead, responsavel: newResponsavelName } : lead
+        )
+      );
     }
 
-    // Busca o usuário normalmente se responsavelId não for null
-    let usuario = usuarios.find((u) => u.id === responsavelId);
-
-    if (!usuario) {
-      console.warn("Usuário não encontrado para transferência de lead.");
-      return;
+    // Enviar a atualização para o Google Apps Script
+    try {
+      await fetch(GOOGLE_SHEETS_USERS + '?v=transferir_lead', { // Usando GOOGLE_SHEETS_USERS como base
+        method: 'POST',
+        mode: 'no-cors', // Importante para evitar problemas de CORS
+        body: JSON.stringify({
+          id: leadId, // O GAS espera 'id' e 'responsavel'
+          responsavel: newResponsavelName
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('Requisição de transferência de lead enviada para o GAS.');
+    } catch (error) {
+      console.error('Erro ao enviar transferência de lead para o GAS:', error);
     }
-
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.id === leadId ? { ...lead, responsavel: usuario.nome } : lead
-      )
-    );
   };
 
   // Função para atualizar o status ou tipo de um usuário
@@ -362,7 +383,7 @@ const App = () => {
 
     try {
       // Faz a chamada para o Apps Script via fetch POST
-      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_usuario', {
+      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_usuario', {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
