@@ -13,9 +13,9 @@ import Ranking from './pages/Ranking';
 import CriarLead from './pages/CriarLead'; // Importa o novo componente CriarLead
 
 // URLs para o Google Apps Script
-const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
-const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
-const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados';
+const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
+const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados';
 
 const App = () => {
   const navigate = useNavigate();
@@ -217,7 +217,7 @@ const App = () => {
         if (jaExiste) {
           // Se já existe, só atualiza
           const atualizados = prev.map((lead) =>
-            leadsFechados.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
+            lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
           );
           return atualizados;
         } else {
@@ -300,7 +300,7 @@ const App = () => {
 
     try {
       // Faz a chamada para o Apps Script via fetch POST
-      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_seguradora', {
+      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_seguradora', {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -325,30 +325,57 @@ const App = () => {
   };
 
   // Função para transferir um lead para outro responsável
-  const transferirLead = (leadId, responsavelId) => {
+  const transferirLead = async (leadId, responsavelId) => { // Tornar a função assíncrona
+    let newResponsavelName = '';
+    let updatedLead = null; // Variável para armazenar o lead atualizado para envio ao GAS
+
+    // Encontra o lead na lista atual
+    const leadToUpdate = leads.find((lead) => lead.id === leadId);
+    if (!leadToUpdate) {
+      console.warn("Lead não encontrado para transferência.");
+      return;
+    }
+
     if (responsavelId === null) {
       // Se for null, desatribui o responsável
-      setLeads((prev) =>
-        prev.map((lead) =>
-          lead.id === leadId ? { ...lead, responsavel: null } : lead
-        )
-      );
-      return;
+      newResponsavelName = ''; // Define como vazio para enviar ao GAS
+      updatedLead = { ...leadToUpdate, responsavel: null }; // Atualiza o objeto para o GAS
+    } else {
+      // Busca o usuário normalmente se responsavelId não for null
+      let usuario = usuarios.find((u) => u.id === responsavelId);
+
+      if (!usuario) {
+        console.warn("Usuário não encontrado para transferência de lead.");
+        return;
+      }
+      newResponsavelName = usuario.nome;
+      updatedLead = { ...leadToUpdate, responsavel: newResponsavelName }; // Atualiza o objeto para o GAS
     }
 
-    // Busca o usuário normalmente se responsavelId não for null
-    let usuario = usuarios.find((u) => u.id === responsavelId);
-
-    if (!usuario) {
-      console.warn("Usuário não encontrado para transferência de lead.");
-      return;
-    }
-
+    // Atualiza o estado local imediatamente
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.id === leadId ? { ...lead, responsavel: usuario.nome } : lead
+        lead.id === leadId ? { ...lead, responsavel: newResponsavelName } : lead
       )
     );
+
+    // Enviar a atualização para o Google Apps Script
+    try {
+      // Usando GOOGLE_SHEETS_USERS como base para a URL do script
+      await fetch(GOOGLE_SHEETS_USERS + '?v=transferir_lead', {
+        method: 'POST',
+        mode: 'no-cors', // Importante para evitar problemas de CORS
+        body: JSON.stringify({
+          lead: updatedLead // Envia o objeto lead completo atualizado
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('Requisição de transferência de lead enviada para o GAS.');
+    } catch (error) {
+      console.error('Erro ao enviar transferência de lead para o GAS:', error);
+    }
   };
 
   // Função para atualizar o status ou tipo de um usuário
@@ -362,7 +389,7 @@ const App = () => {
 
     try {
       // Faz a chamada para o Apps Script via fetch POST
-      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xFFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_usuario', {
+      fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_usuario', {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -411,7 +438,7 @@ const App = () => {
       setIsAuthenticated(true);
       setUsuarioLogado(usuarioEncontrado);
     } else {
-      alert('Login ou senha inválidos ou usuário inativo.'); // Mantido alert por enquanto, mas considere um modal customizado
+      alert('Login ou senha inválidos ou usuário inativo.');
     }
   };
 
