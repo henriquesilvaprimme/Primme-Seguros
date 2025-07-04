@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
@@ -219,10 +219,11 @@ const App = () => {
 
       // Forçamos o refresh dos dados após um pequeno delay,
       // pois não temos confirmação do servidor.
+      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
       setTimeout(() => {
         fetchLeadsFromSheet();
-        fetchLeadsFechadosFromSheet();
-      }, 1000); // Pequeno atraso para dar tempo ao GAS de processar
+        fetchLeadsFechadosFromSheet(); 
+      }, 100); // Atraso reduzido para 100 milissegundos
 
     } catch (error) {
       console.error('Erro ao enviar atualização de status do lead:', error);
@@ -231,6 +232,7 @@ const App = () => {
       fetchLeadsFromSheet();
     }
   };
+
 
   // Função para confirmar seguradora do lead (COM no-cors)
   const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
@@ -281,9 +283,10 @@ const App = () => {
 
       console.log("Requisição de confirmação de seguradora enviada. Verifique os logs do GAS.");
 
+      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
       setTimeout(() => {
         fetchLeadsFechadosFromSheet(); // Força o refresh
-      }, 1000);
+      }, 100);
 
     } catch (error) {
       console.error('Erro ao enviar lead fechado para atualização de seguradora:', error);
@@ -321,18 +324,19 @@ const App = () => {
       console.log("Enviando transferência de lead (POST com no-cors):", payload);
       const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
-        mode: 'no-cors', // Mantido no-cors
         headers: {
           'Content-Type': 'application/json',
         },
+        mode: 'no-cors', // Mantido no-cors
         body: JSON.stringify(payload),
       });
 
       console.log("Requisição de transferência de lead enviada. Verifique os logs do GAS.");
 
+      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
       setTimeout(() => {
         fetchLeadsFromSheet(); // Força o refresh
-      }, 1000);
+      }, 100);
 
     } catch (error) {
       console.error('Erro ao transferir lead no Sheets:', error);
@@ -379,18 +383,19 @@ const App = () => {
       console.log("Enviando atualização de status/tipo do usuário (POST com no-cors):", payload);
       const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
-        mode: 'no-cors', // Mantido no-cors
         headers: {
           'Content-Type': 'application/json',
         },
+        mode: 'no-cors', // Mantido no-cors
         body: JSON.stringify(payload),
       });
 
       console.log("Requisição de atualização de usuário enviada. Verifique os logs do GAS.");
 
+      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
       setTimeout(() => {
         fetchUsuariosFromSheet(); // Força o refresh
-      }, 1000);
+      }, 100);
 
     } catch (error) {
       console.error('Erro ao atualizar status/tipo do usuário no Sheets:', error);
