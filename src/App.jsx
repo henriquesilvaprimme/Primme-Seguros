@@ -137,8 +137,11 @@ const App = () => {
   useEffect(() => {
     const fetchUsuariosFromSheet = async () => {
       try {
+        console.log("Tentando buscar usuários da URL:", GOOGLE_SHEETS_USERS + '?v=pegar_usuario');
         const response = await fetch(GOOGLE_SHEETS_USERS + '?v=pegar_usuario');
         const data = await response.json();
+
+        console.log("Dados de usuários recebidos:", data);
 
         if (Array.isArray(data)) {
           // Formata os usuários para o formato esperado pelo aplicativo
@@ -153,8 +156,10 @@ const App = () => {
           }));
 
           setUsuarios(formattedUsuarios);
+          console.log("Usuários formatados e definidos:", formattedUsuarios);
         } else {
           setUsuarios([]);
+          console.log("Dados de usuários não são um array. Definindo como vazio.");
         }
       } catch (error) {
         console.error('Erro ao buscar usuários do Google Sheets:', error);
@@ -355,7 +360,8 @@ const App = () => {
 
     // Enviar a atualização para o Google Apps Script
     try {
-      await fetch(GOOGLE_SHEETS_USERS + '?v=transferir_lead', { // Usando GOOGLE_SHEETS_USERS como base
+      // Usando GOOGLE_SHEETS_USERS como base para a URL do script
+      await fetch(GOOGLE_SHEETS_USERS + '?v=transferir_lead', {
         method: 'POST',
         mode: 'no-cors', // Importante para evitar problemas de CORS
         body: JSON.stringify({
@@ -424,16 +430,19 @@ const App = () => {
 
   // Lida com o processo de login
   const handleLogin = () => {
+    console.log("Tentativa de login com Usuário:", loginInput, "Senha:", senhaInput);
+    console.log("Usuários carregados:", usuarios);
+
     const usuarioEncontrado = usuarios.find(
       (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
     );
 
     if (usuarioEncontrado) {
+      console.log("Usuário encontrado:", usuarioEncontrado);
       setIsAuthenticated(true);
       setUsuarioLogado(usuarioEncontrado);
     } else {
-      // Substituído alert() por uma mensagem mais amigável ou modal se necessário
-      console.error('Login ou senha inválidos ou usuário inativo.');
+      console.error('Login ou senha inválidos ou usuário inativo. Usuário encontrado:', usuarioEncontrado);
       alert('Login ou senha inválidos ou usuário inativo.'); // Mantido alert por enquanto, mas considere um modal customizado
     }
   };
