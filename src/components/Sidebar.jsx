@@ -2,14 +2,27 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Users, Search, Trophy, UserPlus, UserCircle, PlusCircle } from 'lucide-react';
 
-const Sidebar = ({ nomeUsuario }) => {
+// Renomeie a prop para evitar confusão e deixe claro que é o objeto completo do usuário
+const Sidebar = ({ usuarioLogado }) => {
 
-  const isAdmin = nomeUsuario.tipo === 'Admin';
+  // Adicione um log para depuração
+  console.log('Sidebar - usuarioLogado recebido:', usuarioLogado);
+
+  // Verifique se usuarioLogado existe antes de tentar acessar suas propriedades
+  if (!usuarioLogado) {
+    return null; // Ou um loader, ou uma versão simplificada do sidebar se o usuário não estiver logado
+  }
+
+  // Agora podemos acessar as propriedades com segurança
+  const isAdmin = usuarioLogado.tipo === 'Admin';
+  const nomeExibicao = usuarioLogado.nome
+    ? usuarioLogado.nome.charAt(0).toUpperCase() + usuarioLogado.nome.slice(1)
+    : 'Usuário'; // Fallback para caso o nome não exista
 
   return (
     <div className="w-64 bg-white shadow-xl border-r border-gray-200 h-full p-6">
       <h2 className="text-xl font-semibold mb-8">
-        Olá, {nomeUsuario.nome.charAt(0).toUpperCase() + nomeUsuario.nome.slice(1)}
+        Olá, {nomeExibicao}
       </h2>
 
       <nav className="flex flex-col gap-4">
