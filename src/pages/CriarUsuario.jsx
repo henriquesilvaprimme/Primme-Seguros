@@ -9,9 +9,6 @@ const CriarUsuario = ({ adicionarUsuario }) => {
 
   const navigate = useNavigate();
 
-  // Nova URL do Google Apps Script
-  const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
-
   const handleCriar = () => {
     if (!usuario || !email || !nome || !senha) {
       alert('Preencha todos os campos.');
@@ -19,45 +16,44 @@ const CriarUsuario = ({ adicionarUsuario }) => {
     }
 
     const novoUsuario = {
-      id: Date.now(), // ID temporário, o Apps Script pode gerar um ID persistente
+      id: Date.now(),
       usuario, // Usado como login
       email,
       nome, // Nome completo
       senha,
-      tipo: 'Usuario', // Tipo padrão
-      status: 'Ativo', // Status padrão
+      tipo: 'Usuario',
+      status: 'Ativo',
     };
 
-    criarUsuarioFunc(novoUsuario); // Chama a função para enviar ao Apps Script
+    criarUsuarioFunc(novoUsuario);
 
-    // Chama a função para adicionar ao estado local no componente pai (App.jsx)
     adicionarUsuario(novoUsuario);
     
-    // Navega para a página de usuários após a criação
     navigate('/usuarios');
   };
 
-  const criarUsuarioFunc = async (usuarioData) => {
+  const criarUsuarioFunc = async (lead) => {
+
     try {
-      // Usando a nova URL do Google Apps Script
-      const response = await fetch(`${GOOGLE_SHEETS_SCRIPT_URL}?action=criar_usuario`, {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_usuario', {
         method: 'POST',
-        mode: 'no-cors', // Necessário para Google Apps Script se não configurar CORS
+        mode: 'no-cors',
+        body: JSON.stringify(lead),
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(usuarioData),
       });
-
-      // Se o modo for 'no-cors', a resposta não será acessível (response.ok, response.json() não funcionam)
-      // Você confiará no sucesso da requisição HTTP (status 200) e na atualização da planilha
-      alert('Usuário criado com sucesso!'); // Mensagem otimista
-
+      //const result = await response.json();
+      //console.log(result);
     } catch (error) {
-      console.error('Erro ao criar usuário:', error);
-      alert('Erro ao criar usuário. Tente novamente mais tarde.');
+      console.error('Erro ao enviar lead:', error);
     }
   };
+
+  
+
+
+
 
   return (
     <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
@@ -98,3 +94,21 @@ const CriarUsuario = ({ adicionarUsuario }) => {
         <input
           type="password"
           value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleCriar}
+          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
+        >
+          Criar Usuário
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default CriarUsuario;
