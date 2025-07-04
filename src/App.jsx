@@ -25,9 +25,8 @@ const App = () => {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginInput, setLoginInput] = useState('');
-  // CORREÇÃO AQUI: Adicionado useState('') para setSenhaInput
   const [senhaInput, setSenhaInput] = useState(''); 
-  const [usuarioLogado, setUsuarioLogado] = useState(null);
+  const [usuarioLogado, setUsuarioLogado] = useState(null); // Pode ser null no início
   const [leadsFechados, setLeadsFechados] = useState([]);
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
 
@@ -81,15 +80,15 @@ const App = () => {
         if (!leadSelecionado || leadSelecionado.id !== formattedLeads.find(l => l.id === leadSelecionado.id)?.id) {
           setLeads(formattedLeads);
         } else {
-          setLeads(formattedLeads);
+          setLeads(formattedLeads); 
         }
       } else {
         console.error('Dados de leads não são um array ou estão em formato inesperado:', data);
-        setLeads([]);
+        setLeads([]); 
       }
     } catch (error) {
       console.error('Erro ao buscar leads do Google Sheets:', error);
-      setLeads([]);
+      setLeads([]); 
     }
   };
 
@@ -113,11 +112,11 @@ const App = () => {
          setLeadsFechados(data.data);
       } else {
         console.error('Dados de leads fechados não são um array ou estão em formato inesperado:', data);
-        setLeadsFechados([]);
+        setLeadsFechados([]); 
       }
     } catch (error) {
       console.error('Erro ao buscar leads fechados:', error);
-      setLeadsFechados([]);
+      setLeadsFechados([]); 
     }
   };
 
@@ -154,11 +153,11 @@ const App = () => {
           setUsuarios(formattedUsuarios);
         } else {
           console.error('Dados de usuários não são um array ou estão em formato inesperado:', data);
-          setUsuarios([]);
+          setUsuarios([]); 
         }
       } catch (error) {
         console.error('Erro ao buscar usuários do Google Sheets:', error);
-        setUsuarios([]);
+        setUsuarios([]); 
       }
     };
 
@@ -186,28 +185,34 @@ const App = () => {
   const atualizarStatusLeadAntigo = (id, novoStatus, phone) => {
     if (novoStatus === 'Fechado') {
       setLeadsFechados((prev) => {
-        const atualizados = prev.map((leadsFechados) =>
+        // Garantindo que prev é um array antes de mapear
+        const currentLeadsFechados = Array.isArray(prev) ? prev : [];
+        const atualizados = currentLeadsFechados.map((leadsFechados) =>
           leadsFechados.phone === phone ? { ...leadsFechados, Status: novoStatus, confirmado: true } : leadsFechados
         );
         return atualizados;
       });
     }
 
-    setLeads((prev) =>
-      prev.map((lead) =>
+    setLeads((prev) => {
+      // Garantindo que prev é um array antes de mapear
+      const currentLeads = Array.isArray(prev) ? prev : [];
+      return currentLeads.map((lead) =>
         lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
-      )
-    );
+      );
+    });
   };
 
   const atualizarStatusLead = async (id, novoStatus, phone) => {
-    setLeads((prev) =>
-      prev.map((lead) =>
+    setLeads((prev) => {
+      const currentLeads = Array.isArray(prev) ? prev : [];
+      return currentLeads.map((lead) =>
         lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
-      )
-    );
+      );
+    });
 
-    let leadParaAtualizar = leads.find((lead) => lead.phone === phone);
+    // Garante que leads é um array antes de usar .find
+    let leadParaAtualizar = Array.isArray(leads) ? leads.find((lead) => lead.phone === phone) : null;
 
     if (!leadParaAtualizar) {
       console.warn("Lead não encontrado para atualização de status.");
@@ -225,7 +230,7 @@ const App = () => {
       status: novoStatus,
       confirmado: true,
       insurer: leadParaAtualizar.insurer,
-      insurerConfirmed: leadParaAtualizar.insurerConfirmed,
+      insurerConfirmed: leadParaAtualizer.insurerConfirmed === 'true' || leadParaAtualizar.insurerConfirmed === true,
       usuarioId: String(leadParaAtualizar.usuarioId || ''),
       premioLiquido: leadParaAtualizar.premioLiquido,
       comissao: leadParaAtualizar.comissao,
@@ -256,15 +261,16 @@ const App = () => {
 
     if (novoStatus === 'Fechado') {
       setLeadsFechados((prev) => {
-        const jaExiste = prev.some((lead) => lead.phone === phone);
+        const currentLeadsFechados = Array.isArray(prev) ? prev : [];
+        const jaExiste = currentLeadsFechados.some((lead) => lead.phone === phone);
 
         if (jaExiste) {
-          const atualizados = prev.map((lead) =>
+          const atualizados = currentLeadsFechados.map((lead) =>
             lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
           );
           return atualizados;
         } else {
-          const leadParaAdicionar = leads.find((lead) => lead.phone === phone);
+          const leadParaAdicionar = Array.isArray(leads) ? leads.find((lead) => lead.phone === phone) : null; // Garante que leads é array
           if (leadParaAdicionar) {
             const novoLeadFechado = {
               ID: leadParaAdicionar.id || crypto.randomUUID(),
@@ -291,10 +297,10 @@ const App = () => {
               "Ativo/Inativo": leadParaAdicionar["Ativo/Inativo"] || "Ativo",
               confirmado: true
             };
-            return [...prev, novoLeadFechado];
+            return [...currentLeadsFechados, novoLeadFechado];
           }
           console.warn("Lead não encontrado na lista principal para adicionar aos fechados.");
-          return prev;
+          return currentLeadsFechados;
         }
       });
     }
@@ -302,13 +308,14 @@ const App = () => {
 
 
   const atualizarSeguradoraLead = (id, seguradora) => {
-    setLeads((prev) =>
-      prev.map((lead) =>
+    setLeads((prev) => {
+      const currentLeads = Array.isArray(prev) ? prev : [];
+      return currentLeads.map((lead) =>
         lead.id === id
           ? limparCamposLead({ ...lead, insurer: seguradora })
           : lead
-      )
-    );
+      );
+    });
   };
 
   const limparCamposLead = (lead) => ({
@@ -319,7 +326,7 @@ const App = () => {
   });
 
   const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
-    const lead = leadsFechados.find((lead) => lead.ID === id);
+    const lead = Array.isArray(leadsFechados) ? leadsFechados.find((lead) => lead.ID === id) : null; // Garante que leadsFechados é array
 
     if (!lead) {
       console.error("Lead fechado não encontrado para confirmação de seguradora.");
@@ -333,7 +340,8 @@ const App = () => {
     lead.insurerConfirmed = true;
 
     setLeadsFechados((prev) => {
-      const atualizados = prev.map((l) =>
+      const currentLeadsFechados = Array.isArray(prev) ? prev : [];
+      const atualizados = currentLeadsFechados.map((l) =>
         l.ID === id ? { ...lead } : l
       );
       return atualizados;
@@ -373,17 +381,19 @@ const App = () => {
   };
 
   const atualizarDetalhesLeadFechado = (id, campo, valor) => {
-    setLeads((prev) =>
-      prev.map((lead) =>
+    setLeads((prev) => {
+      const currentLeads = Array.isArray(prev) ? prev : [];
+      return currentLeads.map((lead) =>
         lead.id === id ? { ...lead, [campo]: valor } : lead
-      )
-    );
+      );
+    });
   };
 
   const transferirLead = async (leadId, responsavelId) => {
     let responsavelNome = null;
     if (responsavelId !== null) {
-      let usuario = Array.isArray(usuarios) ? usuarios.find((u) => u.id == responsavelId) : null; // Adiciona verificação aqui
+      // Garante que usuarios é um array antes de usar .find
+      let usuario = Array.isArray(usuarios) ? usuarios.find((u) => u.id == responsavelId) : null; 
       if (!usuario) {
         console.warn("Usuário responsável não encontrado para ID:", responsavelId);
         return;
@@ -391,14 +401,15 @@ const App = () => {
       responsavelNome = usuario.nome;
     }
 
-    setLeads((prev) =>
-      prev.map((lead) =>
+    setLeads((prev) => {
+      const currentLeads = Array.isArray(prev) ? prev : [];
+      return currentLeads.map((lead) =>
         lead.id === leadId ? { ...lead, responsavel: responsavelNome } : lead
-      )
-    );
+      );
+    });
 
     try {
-      const leadParaTransferir = leads.find(l => l.id === leadId);
+      const leadParaTransferir = Array.isArray(leads) ? leads.find(l => l.id === leadId) : null; // Garante que leads é array
       if (!leadParaTransferir) {
         console.error("Lead não encontrado para transferência:", leadId);
         return;
@@ -425,7 +436,7 @@ const App = () => {
 
 
   const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
-    const usuario = Array.isArray(usuarios) ? usuarios.find((usuario) => usuario.id === id) : null; // Adiciona verificação aqui
+    const usuario = Array.isArray(usuarios) ? usuarios.find((usuario) => usuario.id === id) : null; // Garante que usuarios é array
     if (!usuario) return;
 
     const usuarioAtualizado = { ...usuario };
@@ -442,8 +453,9 @@ const App = () => {
         },
       });
       console.log(`Status/Tipo do usuário ${id} enviado para atualização no Sheets.`);
-      setUsuarios((prev) =>
-        prev.map((u) =>
+      setUsuarios((prev) => {
+        const currentUsuarios = Array.isArray(prev) ? prev : [];
+        return currentUsuarios.map((u) =>
           u.id === id
             ? {
               ...u,
@@ -451,8 +463,8 @@ const App = () => {
               ...(novoTipo !== null ? { tipo: novoTipo } : {}),
             }
             : u
-        )
-      );
+        );
+      });
     } catch (error) {
       console.error('Erro ao atualizar status/tipo do usuário no Sheets:', error);
       alert('Erro ao atualizar status/tipo do usuário no servidor.');
@@ -533,7 +545,8 @@ const App = () => {
     );
   }
 
-  const isAdmin = usuarioLogado?.tipo === 'Admin';
+  // Define isAdmin com base em usuarioLogado ser um objeto e ter a propriedade 'tipo'
+  const isAdmin = usuarioLogado && usuarioLogado.tipo === 'Admin';
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
@@ -547,14 +560,20 @@ const App = () => {
             element={
               <Dashboard
                 leadsClosed={
-                  isAdmin
-                    ? (Array.isArray(leadsFechados) ? leadsFechados : [])
-                    : (Array.isArray(leadsFechados) ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome) : [])
+                  isAdmin && Array.isArray(leadsFechados) // Se for admin e leadsFechados for array, usa.
+                    ? leadsFechados
+                    : (Array.isArray(leadsFechados) && usuarioLogado // Se não for admin, mas leadsFechados for array E usuarioLogado existir
+                        ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
+                        : [] // Caso contrário, array vazio
+                      )
                 }
                 leads={
-                  isAdmin
-                    ? (Array.isArray(leads) ? leads : [])
-                    : (Array.isArray(leads) ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome) : [])
+                  isAdmin && Array.isArray(leads) // Se for admin e leads for array, usa.
+                    ? leads
+                    : (Array.isArray(leads) && usuarioLogado // Se não for admin, mas leads for array E usuarioLogado existir
+                        ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
+                        : [] // Caso contrário, array vazio
+                      )
                 }
                 usuarioLogado={usuarioLogado}
               />
@@ -564,7 +583,14 @@ const App = () => {
             path="/leads"
             element={
               <Leads
-                leads={isAdmin ? (Array.isArray(leads) ? leads : []) : (Array.isArray(leads) ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome) : [])}
+                leads={
+                  isAdmin && Array.isArray(leads)
+                    ? leads
+                    : (Array.isArray(leads) && usuarioLogado
+                        ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
+                        : []
+                      )
+                }
                 usuarios={Array.isArray(usuarios) ? usuarios : []}
                 onUpdateStatus={atualizarStatusLead}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
@@ -577,7 +603,14 @@ const App = () => {
             path="/leads-fechados"
             element={
               <LeadsFechados
-                leads={isAdmin ? (Array.isArray(leadsFechados) ? leadsFechados : []) : (Array.isArray(leadsFechados) ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome) : [])}
+                leads={
+                  isAdmin && Array.isArray(leadsFechados)
+                    ? leadsFechados
+                    : (Array.isArray(leadsFechados) && usuarioLogado
+                        ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
+                        : []
+                      )
+                }
                 usuarios={Array.isArray(usuarios) ? usuarios : []}
                 onUpdateInsurer={atualizarSeguradoraLead}
                 onConfirmInsurer={confirmarSeguradoraLead}
@@ -594,7 +627,14 @@ const App = () => {
             path="/leads-perdidos"
             element={
               <LeadsPerdidos
-                leads={isAdmin ? (Array.isArray(leads) ? leads : []) : (Array.isArray(leads) ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome) : [])}
+                leads={
+                  isAdmin && Array.isArray(leads)
+                    ? leads
+                    : (Array.isArray(leads) && usuarioLogado
+                        ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
+                        : []
+                      )
+                }
                 usuarios={Array.isArray(usuarios) ? usuarios : []}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
                 onAbrirLead={onAbrirLead}
@@ -619,6 +659,7 @@ const App = () => {
             element={<CriarLead adicionarLead={adicionarLead} />}
           />
 
+          {/* Somente renderiza rotas de admin se isAdmin for verdadeiro */}
           {isAdmin && (
             <>
               <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
@@ -626,7 +667,7 @@ const App = () => {
                 path="/usuarios"
                 element={
                   <Usuarios
-                    leads={isAdmin ? (Array.isArray(leads) ? leads : []) : (Array.isArray(leads) ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome) : [])}
+                    leads={isAdmin && Array.isArray(leads) ? leads : []} // Para o componente Usuarios, leads é sempre todos se for admin
                     usuarios={Array.isArray(usuarios) ? usuarios : []}
                     fetchLeadsFromSheet={fetchLeadsFromSheet}
                     fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
