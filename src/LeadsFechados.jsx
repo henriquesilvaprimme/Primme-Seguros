@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
 const LeadsFechados = ({
-  leads,
+  leads, // Esta prop agora contém todos os leads, mas vamos filtrar aqui
   usuarios,
-  onUpdateInsurer,
+  onUpdateInsurer, // Não usado diretamente, mas mantido
   onConfirmInsurer,
-  onUpdateDetalhes,
+  onUpdateDetalhes, // Não usado diretamente, mas mantido
   fetchLeadsFechadosFromSheet,
   isAdmin,
 }) => {
+  // Filtramos os leads fechados diretamente da prop 'leads'
+  // Esta variável será recalculada sempre que a prop 'leads' mudar
   const fechados = leads.filter((lead) => lead.Status === 'Fechado');
 
   // Obtém o mês e ano atual no formato 'YYYY-MM'
@@ -19,10 +21,14 @@ const LeadsFechados = ({
     return `${ano}-${mes}`;
   };
 
-  const [valores, setValores] = useState(() => {
-    const inicial = {};
+  const [valores, setValores] = useState({}); // Inicializa vazio, será populado no useEffect
+
+  // O useEffect para sincronizar 'valores' com a prop 'leads'
+  useEffect(() => {
+    const novosValores = {};
     fechados.forEach((lead) => {
-      inicial[lead.ID] = {
+      // Sempre recria o objeto para o lead.ID, garantindo que os dados mais recentes sejam usados
+      novosValores[lead.ID] = {
         PremioLiquido:
           lead.PremioLiquido !== undefined
             ? Math.round(parseFloat(lead.PremioLiquido) * 100)
@@ -32,32 +38,8 @@ const LeadsFechados = ({
         insurer: lead.Seguradora || '',
       };
     });
-    return inicial;
-  });
-
-  useEffect(() => {
-    setValores((prevValores) => {
-      const novosValores = { ...prevValores };
-
-      leads
-        .filter((lead) => lead.Status === 'Fechado')
-        .forEach((lead) => {
-          if (!novosValores[lead.ID]) {
-            novosValores[lead.ID] = {
-              PremioLiquido:
-                lead.PremioLiquido !== undefined
-                  ? Math.round(parseFloat(lead.PremioLiquido) * 100)
-                  : 0,
-              Comissao: lead.Comissao ? String(lead.Comissao) : '',
-              Parcelamento: lead.Parcelamento || '',
-              insurer: lead.Seguradora || '',
-            };
-          }
-        });
-
-      return novosValores;
-    });
-  }, [leads]);
+    setValores(novosValores);
+  }, [fechados]); // Depende de 'fechados', que por sua vez depende de 'leads'
 
   const [nomeInput, setNomeInput] = useState('');
   const [dataInput, setDataInput] = useState(getMesAnoAtual());
@@ -146,17 +128,26 @@ const LeadsFechados = ({
     const valorReais = valorCentavos / 100;
 
     if (!isNaN(valorReais)) {
-      onUpdateDetalhes(id, 'PremioLiquido', valorReais);
+      onConfirmInsurer(
+        id,
+        valorReais,
+        valores[id]?.insurer,
+        valores[id]?.Comissao,
+        valores[id]?.Parcelamento
+      );
     } else {
-      onUpdateDetalhes(id, 'PremioLiquido', '');
+      // Se for inválido, talvez você queira enviar null ou vazio, ou não fazer nada
+      // onConfirmInsurer(id, null, valores[id]?.insurer, valores[id]?.Comissao, valores[id]?.Parcelamento);
     }
   };
 
   const handleComissaoChange = (id, valor) => {
+    // Permite números e uma vírgula opcional seguida de até um dígito
     const regex = /^(\d{0,2})(,?\d{0,1})?$/;
+    const valorFormatado = valor.replace('.', ','); // Garante uso da vírgula
 
-    if (valor === '' || regex.test(valor)) {
-      const valorLimitado = valor.slice(0, 4);
+    if (valorFormatado === '' || regex.test(valorFormatado)) {
+      const valorLimitado = valorFormatado.slice(0, 4);
 
       setValores((prev) => ({
         ...prev,
@@ -165,10 +156,20 @@ const LeadsFechados = ({
           Comissao: valorLimitado,
         },
       }));
-
-      const valorFloat = parseFloat(valorLimitado.replace(',', '.'));
-      onUpdateDetalhes(id, 'Comissao', isNaN(valorFloat) ? '' : valorFloat);
     }
+  };
+
+  const handleComissaoBlur = (id) => {
+    const valorComissao = valores[id]?.Comissao || '';
+    const valorFloat = parseFloat(valorComissao.replace(',', '.')); // Converte para float para enviar
+
+    onConfirmInsurer(
+      id,
+      valores[id]?.PremioLiquido / 100, // Envia em Reais
+      valores[id]?.insurer,
+      isNaN(valorFloat) ? '' : valorFloat,
+      valores[id]?.Parcelamento
+    );
   };
 
   const handleParcelamentoChange = (id, valor) => {
@@ -179,8 +180,37 @@ const LeadsFechados = ({
         Parcelamento: valor,
       },
     }));
-    onUpdateDetalhes(id, 'Parcelamento', valor);
+    // Não chama onConfirmInsurer aqui, apenas no blur
   };
+
+  const handleParcelamentoBlur = (id) => {
+    onConfirmInsurer(
+      id,
+      valores[id]?.PremioLiquido / 100, // Envia em Reais
+      valores[id]?.insurer,
+      parseFloat(valores[id]?.Comissao?.replace(',', '.')) || '', // Converte para float
+      valores[id]?.Parcelamento
+    );
+  };
+
+  const handleInsurerChange = (id, valor) => {
+    setValores((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        insurer: valor,
+      },
+    }));
+    // Chame onConfirmInsurer aqui se a seleção da seguradora precisar ser salva imediatamente
+    onConfirmInsurer(
+      id,
+      valores[id]?.PremioLiquido / 100, // Envia em Reais
+      valor, // Novo valor da seguradora
+      parseFloat(valores[id]?.Comissao?.replace(',', '.')) || '', // Converte para float
+      valores[id]?.Parcelamento
+    );
+  };
+
 
   const inputWrapperStyle = {
     position: 'relative',
@@ -387,18 +417,8 @@ const LeadsFechados = ({
               >
                 <select
                   value={valores[lead.ID]?.insurer || ''}
-                  onChange={(e) => {
-                    const valor = e.target.value;
-                    setValores((prev) => ({
-                      ...prev,
-                      [lead.ID]: {
-                        ...prev[lead.ID],
-                        insurer: valor,
-                      },
-                    }));
-                    onUpdateInsurer(lead.ID, valor);
-                  }}
-                  disabled={lead.Seguradora}
+                  onChange={(e) => handleInsurerChange(lead.ID, e.target.value)}
+                  disabled={!!lead.Seguradora}
                   style={{
                     padding: '8px',
                     border: '2px solid #ccc',
@@ -436,7 +456,8 @@ const LeadsFechados = ({
                     placeholder="Comissão (%)"
                     value={valores[lead.ID]?.Comissao || ''}
                     onChange={(e) => handleComissaoChange(lead.ID, e.target.value)}
-                    disabled={lead.Seguradora}
+                    onBlur={() => handleComissaoBlur(lead.ID)} // Chama onConfirmInsurer no blur
+                    disabled={!!lead.Seguradora}
                     maxLength={4}
                     style={inputWithPrefixStyle}
                   />
@@ -445,7 +466,8 @@ const LeadsFechados = ({
                 <select
                   value={valores[lead.ID]?.Parcelamento || ''}
                   onChange={(e) => handleParcelamentoChange(lead.ID, e.target.value)}
-                  disabled={lead.Seguradora}
+                  onBlur={() => handleParcelamentoBlur(lead.ID)} // Chama onConfirmInsurer no blur
+                  disabled={!!lead.Seguradora}
                   style={{
                     padding: '8px',
                     border: '1px solid #ccc',
@@ -470,10 +492,10 @@ const LeadsFechados = ({
                         parseFloat(
                           valores[lead.ID]?.PremioLiquido
                             .toString()
-                            .replace('.', ',')
-                        ),
+                            .replace('.', ',') // Garante que é um número decimal
+                        ) / 100, // Divide por 100 para transformar em reais
                         valores[lead.ID]?.insurer,
-                        valores[lead.ID]?.Comissao,
+                        parseFloat(valores[lead.ID]?.Comissao?.replace(',', '.')) || '', // Converte para float
                         valores[lead.ID]?.Parcelamento
                       )
                     }
