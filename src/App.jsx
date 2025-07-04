@@ -10,9 +10,9 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
-import CriarLead from './pages/CriarLead'; // Importa o novo componente CriarLead
+import CriarLead from './pages/CriarLead';
 
-// URL BASE do seu Web App no Google Apps Script (ATUALIZADA)
+// URL BASE do seu Web App no Google Apps Script (ATUALIZADA PARA A SUA ÚLTIMA VERSÃO)
 const GOOGLE_APPS_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
 
 // URLs para as Google Sheets APIs, usando a URL base
@@ -20,49 +20,39 @@ const GOOGLE_SHEETS_SCRIPT_URL_GET_LEADS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=get
 const GOOGLE_SHEETS_SCRIPT_URL_USERS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=pegar_usuario`;
 const GOOGLE_SHEETS_SCRIPT_URL_LEADS_FECHADOS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`;
 
-// URLs para ações POST (sem parâmetro 'v' fixo, a ação é passada no corpo ou como 'action')
+// URL para ações POST (sem parâmetro 'v' fixo, a ação é passada no corpo ou como 'action')
 const GOOGLE_SHEETS_SCRIPT_URL_ACTIONS = GOOGLE_APPS_SCRIPT_BASE_URL;
 
 
 const App = () => {
     const navigate = useNavigate();
 
-    // Estados de autenticação
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loginInput, setLoginInput] = useState('');
     const [senhaInput, setSenhaInput] = useState('');
     const [usuarioLogado, setUsuarioLogado] = useState(null);
-
-    // Estado para carregamento da imagem de fundo
+    const [leadsFechados, setLeadsFechados] = useState([]);
     const [backgroundLoaded, setBackgroundLoaded] = useState(false);
 
-    // Estados para dados do Google Sheets
-    const [leads, setLeads] = useState([]);
-    const [leadsFechados, setLeadsFechados] = useState([]);
-    const [usuarios, setUsuarios] = useState([]);
-    
-    // Estado para o lead selecionado ao abrir detalhes
-    const [leadSelecionado, setLeadSelecionado] = useState(null);
-
-    // Carregar imagem de fundo
     useEffect(() => {
         const img = new Image();
         img.src = '/background.png';
         img.onload = () => setBackgroundLoaded(true);
     }, []);
 
-    // Função para buscar leads da planilha
+    const [leads, setLeads] = useState([]);
+    const [leadSelecionado, setLeadSelecionado] = useState(null);
+
     const fetchLeadsFromSheet = useCallback(async () => {
         try {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_GET_LEADS);
             const data = await response.json();
 
             if (Array.isArray(data)) {
-                // Ordena o array por 'editado' (mais recente primeiro), ou 'data' se 'editado' não existir
                 const sortedData = data.sort((a, b) => {
-                    const dateA = new Date(a.editado || a.data || 0); // Usar 0 para datas inválidas/ausentes
+                    const dateA = new Date(a.editado || a.data || 0);
                     const dateB = new Date(b.editado || b.data || 0);
-                    return dateB - dateA; // decrescente (mais recente no topo)
+                    return dateB - dateA;
                 });
 
                 const formattedLeads = sortedData.map((item, index) => ({
@@ -86,7 +76,6 @@ const App = () => {
                     editado: item.editado || ''
                 }));
                 
-                // Atualiza leads apenas se nenhum lead estiver sendo editado
                 if (!leadSelecionado) {
                     setLeads(formattedLeads);
                 }
@@ -101,9 +90,8 @@ const App = () => {
                 setLeads([]);
             }
         }
-    }, [leadSelecionado]); // leadSelecionado como dependência para evitar re-fetch desnecessário
+    }, [leadSelecionado]);
 
-    // Função para buscar leads fechados da planilha
     const fetchLeadsFechadosFromSheet = useCallback(async () => {
         try {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_LEADS_FECHADOS);
@@ -119,7 +107,8 @@ const App = () => {
         }
     }, []);
 
-    // Função para buscar usuários da planilha
+    const [usuarios, setUsuarios] = useState([]);
+
     const fetchUsuariosFromSheet = useCallback(async () => {
         try {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_USERS);
@@ -127,7 +116,7 @@ const App = () => {
 
             if (Array.isArray(data)) {
                 const formattedUsuarios = data.map((item) => ({
-                    id: item.id || crypto.randomUUID(), // Usar UUID se o ID não existir
+                    id: item.id || crypto.randomUUID(),
                     usuario: item.usuario || '',
                     nome: item.nome || '',
                     email: item.email || '',
@@ -145,7 +134,6 @@ const App = () => {
         }
     }, []);
 
-    // Efeitos para sincronização inicial e em intervalo
     useEffect(() => {
         fetchLeadsFromSheet();
         const interval = setInterval(fetchLeadsFromSheet, 60000);
@@ -164,19 +152,14 @@ const App = () => {
         return () => clearInterval(interval);
     }, [fetchUsuariosFromSheet]);
 
-
-    // Adicionar um novo usuário (usado em CriarUsuario)
     const adicionarUsuario = (usuario) => {
-        setUsuarios((prev) => [...prev, { ...usuario, id: crypto.randomUUID() }]); // Garante um ID único
+        setUsuarios((prev) => [...prev, { ...usuario, id: crypto.randomUUID() }]);
     };
 
-    // Adicionar um novo lead (usado em CriarLead)
     const adicionarLead = (lead) => {
-        // Atualiza o estado localmente. O salvamento no Apps Script é feito dentro de CriarLead
-        setLeads((prev) => [lead, ...prev]); // Adiciona o novo lead no topo
+        setLeads((prev) => [lead, ...prev]);
     };
 
-    // Atualiza o status de um lead e gerencia a lista de leads fechados
     const atualizarStatusLead = useCallback(async (id, novoStatus, phone) => {
         let leadToUpdate = leads.find((lead) => lead.phone === phone);
 
@@ -185,7 +168,6 @@ const App = () => {
             return;
         }
 
-        // Atualiza o status localmente de imediato
         setLeads((prevLeads) =>
             prevLeads.map((lead) =>
                 lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
@@ -216,25 +198,24 @@ const App = () => {
         try {
             await fetch(`${GOOGLE_SHEETS_SCRIPT_URL_ACTIONS}?action=salvar_lead`, {
                 method: 'POST',
-                mode: 'no-cors', // Lembre-se de que a configuração CORS deve ser no Apps Script
+                mode: 'no-cors',
                 body: JSON.stringify(updatedLeadData),
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
             console.log(`Status do lead ${id} (${phone}) atualizado para ${novoStatus} no Sheets.`);
-            fetchLeadsFromSheet(); // Recarrega os leads para garantir a sincronização
-            fetchLeadsFechadosFromSheet(); // Recarrega os leads fechados também
+            fetchLeadsFromSheet();
+            fetchLeadsFechadosFromSheet();
 
         } catch (error) {
             console.error('Erro ao atualizar status do lead no Sheets:', error);
             alert('Erro ao atualizar status do lead no servidor.');
         }
 
-        // Lógica para adicionar/atualizar em leadsFechados, se o status for "Fechado"
         if (novoStatus === 'Fechado') {
             setLeadsFechados((prevFechados) => {
-                const existingClosedLead = prevFechados.find((closedLead) => closedLead.phone === phone);
+                const existingClosedLead = prevFechados.some((closedLead) => closedLead.phone === phone);
                 if (existingClosedLead) {
                     return prevFechados.map((closedLead) =>
                         closedLead.phone === phone ? { ...closedLead, Status: novoStatus, confirmado: true } : closedLead
@@ -263,8 +244,6 @@ const App = () => {
         }
     }, [leads, fetchLeadsFromSheet, fetchLeadsFechadosFromSheet]);
 
-
-    // Limpa campos específicos de um lead
     const limparCamposLead = (lead) => ({
         ...lead,
         premioLiquido: "",
@@ -272,7 +251,6 @@ const App = () => {
         parcelamento: "",
     });
 
-    // Atualiza a seguradora de um lead
     const atualizarSeguradoraLead = useCallback((id, seguradora) => {
         setLeads((prev) =>
             prev.map((lead) =>
@@ -283,7 +261,6 @@ const App = () => {
         );
     }, []);
 
-    // Confirma a seguradora e envia os dados para a planilha
     const confirmarSeguradoraLead = useCallback(async (id, premio, seguradora, comissao, parcelamento) => {
         const lead = leadsFechados.find((l) => l.ID == id);
 
@@ -298,10 +275,9 @@ const App = () => {
             PremioLiquido: premio,
             Comissao: comissao,
             Parcelamento: parcelamento,
-            insurerConfirmed: true // Atualiza o status de confirmação
+            insurerConfirmed: true
         };
 
-        // Atualiza localmente a lista de leads fechados
         setLeadsFechados((prev) =>
             prev.map((l) => (l.ID === id ? updatedLead : l))
         );
@@ -315,14 +291,13 @@ const App = () => {
                     'Content-Type': 'application/json',
                 },
             });
-            fetchLeadsFechadosFromSheet(); // Recarrega para garantir consistência
+            fetchLeadsFechadosFromSheet();
         } catch (error) {
             console.error('Erro ao enviar lead para Apps Script:', error);
             alert('Erro ao salvar os dados da seguradora. Tente novamente.');
         }
     }, [leadsFechados, fetchLeadsFechadosFromSheet]);
 
-    // Atualiza detalhes de um lead fechado (presume-se que seja para LeadsFechados)
     const atualizarDetalhesLeadFechado = useCallback(async (id, campo, valor) => {
         const leadToUpdate = leadsFechados.find((l) => l.ID == id);
         if (!leadToUpdate) {
@@ -355,7 +330,6 @@ const App = () => {
         }
     }, [leadsFechados, fetchLeadsFechadosFromSheet]);
 
-    // Transfere a responsabilidade de um lead para outro usuário
     const transferirLead = useCallback(async (leadId, responsavelId) => {
         let responsavelNome = null;
         if (responsavelId !== null) {
@@ -402,7 +376,6 @@ const App = () => {
 
     }, [usuarios, leads, fetchLeadsFromSheet]);
 
-    // Atualiza o status ou tipo de um usuário
     const atualizarStatusUsuario = useCallback(async (id, novoStatus = null, novoTipo = null) => {
         const usuario = usuarios.find((u) => u.id === id);
         if (!usuario) {
@@ -423,9 +396,16 @@ const App = () => {
                     'Content-Type': 'application/json',
                 },
             });
-            // Atualizar localmente
             setUsuarios((prev) =>
-                prev.map((u) => (u.id === id ? updatedUsuario : u))
+                prev.map((u) =>
+                    u.id === id
+                        ? {
+                            ...u,
+                            ...(novoStatus !== null ? { status: novoStatus } : {}),
+                            ...(novoTipo !== null ? { tipo: novoTipo } : {}),
+                          }
+                        : u
+                )
             );
             fetchUsuariosFromSheet();
         } catch (error) {
@@ -434,8 +414,6 @@ const App = () => {
         }
     }, [usuarios, fetchUsuariosFromSheet]);
 
-
-    // Função para abrir os detalhes de um lead e navegar para a rota correta
     const onAbrirLead = useCallback((lead) => {
         setLeadSelecionado(lead);
         let path = '/leads';
@@ -444,7 +422,6 @@ const App = () => {
         navigate(path);
     }, [navigate]);
 
-    // Lógica de autenticação
     const handleLogin = () => {
         const usuarioEncontrado = usuarios.find(
             (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
@@ -458,7 +435,6 @@ const App = () => {
         }
     };
 
-    // Renderiza a tela de login se não estiver autenticado
     if (!isAuthenticated) {
         return (
             <div
@@ -509,15 +485,16 @@ const App = () => {
         );
     }
 
-    // Determina se o usuário logado é um administrador
     const isAdmin = usuarioLogado?.tipo === 'Admin';
 
     return (
-        <div style={{ display: 'flex', height: '100vh' }}>
-            {/* Sidebar é renderizada aqui. Certifique-se que o componente Sidebar.jsx tenha estilos para ser visível */}
-            <Sidebar isAdmin={isAdmin} nomeUsuario={usuarioLogado} />
+        <div style={{ display: 'flex', height: '100vh', width: '100vw' }}> {/* Adicionado width: '100vw' */}
+            {/* Aqui, o contêiner da Sidebar recebe uma largura fixa */}
+            <div style={{ flexShrink: 0, width: '250px', backgroundColor: '#2d3748' }}> {/* Cor de fundo para depuração */}
+                <Sidebar isAdmin={isAdmin} nomeUsuario={usuarioLogado} />
+            </div>
 
-            <main style={{ flex: 1, overflow: 'auto' }}>
+            <main style={{ flexGrow: 1, overflowY: 'auto' }}> {/* flexGrow para ocupar o restante, overflowY para rolagem */}
                 <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route
@@ -594,7 +571,6 @@ const App = () => {
                         }
                     />
 
-                    {/* Rota para Criar Lead */}
                     <Route
                         path="/criar-lead"
                         element={<CriarLead googleAppsScriptUrl={GOOGLE_SHEETS_SCRIPT_URL_ACTIONS} adicionarLead={adicionarLead} />}
