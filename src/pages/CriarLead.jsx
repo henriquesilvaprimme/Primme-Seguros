@@ -1,146 +1,121 @@
+// CriarLead.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const CriarLead = ({ adicionarLead }) => {
-  // Estados para os campos do lead
-  const [name, setName] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [vehicleYearModel, setVehicleYearModel] = useState('');
-  const [city, setCity] = useState('');
-  const [phone, setPhone] = useState('');
-  const [insuranceType, setInsuranceType] = useState('');
+  const [nomeLead, setNomeLead] = useState('');
+  const [emailLead, setEmailLead] = useState('');
+  const [telefoneLead, setTelefoneLead] = useState('');
+  const [origemLead, setOrigemLead] = useState(''); // Ex: 'Site', 'Telefone', 'Indicação'
 
   const navigate = useNavigate();
 
-  // Função para criar lead
-  const handleCriar = () => {
-    if (
-      !name ||
-      !vehicleModel ||
-      !vehicleYearModel ||
-      !city ||
-      !phone ||
-      !insuranceType
-    ) {
-      alert('Preencha todos os campos.');
+  const handleCriar = async () => {
+    if (!nomeLead || !emailLead || !telefoneLead || !origemLead) {
+      alert('Por favor, preencha todos os campos do lead.');
       return;
     }
 
-    // Cria o objeto lead conforme o esperado pela planilha
     const novoLead = {
-      id: Date.now(),
-      name,
-      vehicleModel,
-      vehicleYearModel,
-      city,
-      phone,
-      insuranceType,
-      data: new Date().toISOString().split('T')[0],
+      id: Date.now(), // Um ID único para o lead
+      nome: nomeLead,
+      email: emailLead,
+      telefone: telefoneLead,
+      origem: origemLead,
+      dataCriacao: new Date().toLocaleString(), // Data e hora de criação
+      status: 'Novo', // Status inicial do lead
     };
 
-    // Envia para o Google Sheets
-    criarLeadFunc(novoLead);
-
-    // Atualiza o estado local com o novo lead
-    adicionarLead(novoLead);
-
-    // Navega para a página de listagem de leads
-    navigate('/leads');
+    try {
+      await enviarLeadParaSheets(novoLead); // Chama a função para enviar para o Sheets
+      adicionarLead(novoLead); // Adiciona o lead ao estado local da aplicação (se houver)
+      alert('Lead criado e enviado com sucesso!');
+      navigate('/leads'); // Redireciona para a página de leads (ajuste conforme sua rota)
+    } catch (error) {
+      console.error('Erro ao criar ou enviar lead:', error);
+      alert('Ocorreu um erro ao criar o lead. Por favor, tente novamente.');
+    }
   };
 
-  // Função que chama o endpoint do Apps Script para criar lead
-  const criarLeadFunc = async (lead) => {
+  const enviarLeadParaSheets = async (lead) => {
+    // ATENÇÃO: Substitua ESTA URL pela URL DO SEU GOOGLE APPS SCRIPT DEPLOYADO
+    // Este é o mesmo conceito da URL do criar_usuario, mas para leads.
+    const urlDoAppsScript = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead'; 
+
     try {
-      await fetch(
-        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=criar_lead',
-        {
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify(lead),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      // Como usa no-cors, não tem resposta legível
+      const response = await fetch(urlDoAppsScript, {
+        method: 'POST',
+        mode: 'no-cors', // Importante para evitar problemas de CORS com o Apps Script
+        body: JSON.stringify(lead),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // No modo 'no-cors', você não consegue ler a resposta diretamente.
+      // O sucesso é inferido pela ausência de erros na requisição.
+      // console.log('Requisição enviada para o Apps Script.');
+
     } catch (error) {
-      console.error('Erro ao enviar lead:', error);
+      console.error('Erro ao enviar lead para o Google Sheets via Apps Script:', error);
+      throw error; // Propaga o erro para ser tratado por handleCriar
     }
   };
 
   return (
     <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
-      <h2 className="text-3xl font-bold text-indigo-700 mb-4">Criar Novo Lead</h2>
+      <h2 className="text-3xl font-bold text-green-700 mb-4">Criar Novo Lead</h2>
 
       <div>
-        <label className="block text-gray-700">Nome</label>
+        <label className="block text-gray-700">Nome do Lead</label>
         <input
           type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={nomeLead}
+          onChange={(e) => setNomeLead(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
         />
       </div>
 
       <div>
-        <label className="block text-gray-700">Modelo do Veículo</label>
+        <label className="block text-gray-700">Email do Lead</label>
+        <input
+          type="email"
+          value={emailLead}
+          onChange={(e) => setEmailLead(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-gray-700">Telefone do Lead</label>
         <input
           type="text"
-          value={vehicleModel}
-          onChange={(e) => setVehicleModel(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={telefoneLead}
+          onChange={(e) => setTelefoneLead(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
         />
       </div>
 
       <div>
-        <label className="block text-gray-700">Ano/Modelo</label>
-        <input
-          type="text"
-          value={vehicleYearModel}
-          onChange={(e) => setVehicleYearModel(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Cidade</label>
-        <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Telefone</label>
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-      </div>
-
-      <div>
-        <label className="block text-gray-700">Tipo de Seguro</label>
+        <label className="block text-gray-700">Origem do Lead</label>
         <select
-          value={insuranceType}
-          onChange={(e) => setInsuranceType(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={origemLead}
+          onChange={(e) => setOrigemLead(e.target.value)}
+          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
         >
-          <option value="">Selecione</option>
-          <option value="Auto">Auto</option>
-          <option value="Moto">Moto</option>
-          <option value="Caminhão">Caminhão</option>
-          <option value="Frota">Frota</option>
+          <option value="">Selecione a origem</option>
+          <option value="Site">Site</option>
+          <option value="Telefone">Telefone</option>
+          <option value="Indicacao">Indicação</option>
+          <option value="Redes Sociais">Redes Sociais</option>
+          <option value="Outro">Outro</option>
         </select>
       </div>
 
       <div className="flex justify-end">
         <button
           onClick={handleCriar}
-          className="bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600 transition"
+          className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
         >
           Criar Lead
         </button>
