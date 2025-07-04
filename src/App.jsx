@@ -10,664 +10,521 @@ import BuscarLead from './BuscarLead';
 import CriarUsuario from './pages/CriarUsuario';
 import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
-import CriarLead from './pages/CriarLead';
 
-// --- URLs do Google Apps Script ---
-const GOOGLE_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
-const GOOGLE_SHEETS_LEADS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=getLeads`;
-const GOOGLE_SHEETS_USERS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_usuario`;
-const GOOGLE_SHEETS_POST_ACTION_URL = `${GOOGLE_SCRIPT_BASE_URL}`;
+// URL BASE do seu Web App no Google Apps Script
+const GOOGLE_APPS_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
+
+// URLs para as Google Sheets APIs, usando a URL base
+const GOOGLE_SHEETS_SCRIPT_URL = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=getLeads`;
+const GOOGLE_SHEETS_USERS = GOOGLE_APPS_SCRIPT_BASE_URL; // O parâmetro 'v=pegar_usuario' será adicionado nas chamadas
+const GOOGLE_SHEETS_LEADS_FECHADOS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`;
+const GOOGLE_SHEETS_ALTERAR_SEGURADORA = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=alterar_seguradora`;
+const GOOGLE_SHEETS_ALTERAR_USUARIO = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=alterar_usuario`;
+
 
 const App = () => {
-  const navigate = useNavigate();
-
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginInput, setLoginInput] = useState('');
-  const [senhaInput, setSenhaInput] = useState('');
-  const [usuarioLogado, setUsuarioLogado] = useState(null);
-  const [backgroundLoaded, setBackgroundLoaded] = useState(false);
-
-  // 'leads' é a única fonte de verdade para todos os leads (ativos, fechados, perdidos)
-  const [leads, setLeads] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
-  const [leadSelecionado, setLeadSelecionado] = useState(null);
-
-  useEffect(() => {
-    const img = new Image();
-    img.src = '/background.png'; // Verifique o caminho correto da imagem
-    img.onload = () => setBackgroundLoaded(true);
-  }, []);
-
-  // Função para buscar leads do Google Sheet
-  const fetchLeadsFromSheet = useCallback(async () => {
-    try {
-      console.log("Fetching leads from:", GOOGLE_SHEETS_LEADS_API);
-      const response = await fetch(GOOGLE_SHEETS_LEADS_API);
-
-      if (!response.ok) {
-        console.error(`HTTP error fetching leads: ${response.status} - ${response.statusText}`);
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Dados de Leads Recebidos (Crus):", data);
-
-      if (Array.isArray(data)) {
-        const sortedData = data.sort((a, b) => {
-          const dateA = new Date(a.editado || a.data);
-          const dateB = new Date(b.editado || b.data);
-          return dateB - dateA;
-        });
-
-        const formattedLeads = sortedData.map((item, index) => {
-          // Função auxiliar para padronizar o acesso a propriedades
-          const getProp = (propNames, defaultValue = '') => {
-            for (const name of propNames) {
-              if (item[name] !== undefined && item[name] !== null) {
-                return item[name];
-              }
-            }
-            return defaultValue;
-          };
-
-          return {
-            // Padroniza todas as chaves para camelCase e garante os tipos corretos
-            id: String(getProp(['id'], String(index + 1))),
-            name: getProp(['name', 'Name']),
-            vehicleModel: getProp(['vehiclemodel', 'vehicleModel']),
-            vehicleYearModel: getProp(['vehicleyearmodel', 'vehicleYearModel']),
-            city: getProp(['city']),
-            phone: String(getProp(['phone', 'Telefone'])), // Garante que telefone seja string
-            insuranceType: getProp(['insurancetype', 'insuranceType']),
-            status: getProp(['status'], 'Selecione o status'),
-            confirmado: getProp(['confirmado']) === 'true' || getProp(['confirmado']) === true,
-            insurer: getProp(['insurer', 'Seguradora']), // Agora 'insurer' ou 'Seguradora' é o campo principal
-            insurerConfirmed: getProp(['insurerconfirmed']) === 'true' || getProp(['insurerconfirmed']) === true,
-            usuarioId: String(getProp(['usuarioid'], '')),
-            
-            // Para Prêmio Líquido, Comissão, Parcelamento:
-            // Preferimos que o valor seja numérico ou vazio para manipulação.
-            // Para 'PremioLiquido' e 'Comissao', o Sheets pode retornar como string,
-            // então usamos parseFloat e tratamos NaN.
-            premioLiquido: parseFloat(String(getProp(['premioliquido', 'PremioLiquido'], '0')).replace(',', '.')) || 0,
-            comissao: parseFloat(String(getProp(['comissao', 'Comissao'], '0')).replace(',', '.')) || 0,
-            parcelamento: getProp(['parcelamento', 'Parcelamento']),
-
-            createdAt: getProp(['data'], new Date().toISOString()),
-            responsavel: getProp(['responsavel', 'Responsavel']),
-            editado: getProp(['editado']),
-
-            // *** IMPORTANTE: Mapeamento explícito para as chaves esperadas pelo `LeadsFechados` ***
-            // Isso garante que o componente `LeadsFechados` encontre as propriedades
-            // com as chaves exatas que ele espera (ex: `ID`, `Data`, `Seguradora`, `PremioLiquido`, etc.)
-            // que foram definidas no código LeadsFechados.jsx que você enviou.
-            ID: String(getProp(['id'], String(index + 1))), // ID do lead
-            Data: getProp(['data'], new Date().toISOString()).split('T')[0], // Apenas a data (AAAA-MM-DD)
-            Seguradora: getProp(['insurer', 'Seguradora']),
-            PremioLiquido: parseFloat(String(getProp(['premioliquido', 'PremioLiquido'], '0')).replace(',', '.')) || 0,
-            Comissao: parseFloat(String(getProp(['comissao', 'Comissao'], '0')).replace(',', '.')) || 0,
-            Parcelamento: getProp(['parcelamento', 'Parcelamento']),
-            Responsavel: getProp(['responsavel', 'Responsavel']),
-            Telefone: String(getProp(['phone', 'Telefone'])),
-            Status: getProp(['status'], 'Selecione o status'), // 'Status' com S maiúsculo
-          };
-        });
-
-        console.log("Leads Formatados para estado global:", formattedLeads);
-        setLeads(formattedLeads); // Atualiza o estado principal com todos os leads
-      } else {
-        setLeads([]);
-        console.warn("Dados de leads não são um array:", data);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar leads do Google Sheets:', error);
-      setLeads([]);
-    }
-  }, []);
-
-  // Função para buscar usuários do Google Sheet
-  const fetchUsuariosFromSheet = useCallback(async () => {
-    try {
-      console.log("Tentando buscar usuários de:", GOOGLE_SHEETS_USERS_API);
-      const response = await fetch(GOOGLE_SHEETS_USERS_API);
-
-      if (!response.ok) {
-        console.error(`HTTP error fetching users: ${response.status} - ${response.statusText}`);
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Usuários Recebidos no Frontend (para login):", data);
-
-      if (Array.isArray(data)) {
-        const formattedUsuarios = data.map((item) => ({
-          id: String(item.id || ''),
-          usuario: String(item.usuario || ''),
-          nome: String(item.nome || ''),
-          email: String(item.email || ''),
-          senha: String(item.senha || ''),
-          status: String(item.status || 'Ativo'),
-          tipo: String(item.tipo || 'Usuario'),
-        }));
-        setUsuarios(formattedUsuarios);
-        console.log("Usuários formatados e setados no estado:", formattedUsuarios);
-      } else {
-        setUsuarios([]);
-        console.warn("Dados de usuários não são um array:", data);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar usuários do Google Sheets (Frontend):', error);
-      setUsuarios([]);
-    }
-  }, []);
-
-  // Efeitos para buscar dados periodicamente
-  useEffect(() => {
-    fetchLeadsFromSheet();
-    const interval = setInterval(fetchLeadsFromSheet, 60000); // Atualiza leads a cada 1 minuto
-    return () => clearInterval(interval);
-  }, [fetchLeadsFromSheet]);
-
-  useEffect(() => {
-    fetchUsuariosFromSheet();
-    const interval = setInterval(fetchUsuariosFromSheet, 60000); // Atualiza usuários a cada 1 minuto
-    return () => clearInterval(interval);
-  }, [fetchUsuariosFromSheet]);
-
-  const adicionarUsuario = (usuario) => {
-    // Adiciona localmente, mas o CriarUsuario DEVE chamar fetchUsuariosFromSheet após o POST
-    setUsuarios((prev) => [...prev, { ...usuario, id: String(prev.length + 1) }]);
-  };
-
-  const adicionarLead = (lead) => {
-    // Adiciona localmente, mas o CriarLead DEVE chamar fetchLeadsFromSheet após o POST
-    setLeads((prev) => [...prev, lead]);
-  };
-
-  // Função para atualizar status do lead (COM no-cors)
-  const atualizarStatusLead = async (id, novoStatus, phone) => {
-    // Otimisticamente atualiza o estado local para resposta rápida da UI
-    setLeads((prev) =>
-      prev.map((lead) =>
-        String(lead.phone) === String(phone) ? { ...lead, status: novoStatus, Status: novoStatus, confirmado: true } : lead
-      )
-    );
-
-    try {
-      const payload = {
-        action: 'alterar_status',
-        phone: String(phone).trim(),
-        status: novoStatus,
-      };
-
-      console.log("Enviando atualização de status do lead (POST com no-cors):", payload);
-      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Requisição de atualização de status do lead enviada. Verifique os logs do GAS.");
-
-      setTimeout(() => {
-        fetchLeadsFromSheet();
-      }, 100);
-
-    } catch (error) {
-      console.error('Erro ao enviar atualização de status do lead:', error);
-      alert('Erro de rede ao atualizar status do lead. Por favor, tente novamente.');
-      fetchLeadsFromSheet();
-    }
-  };
-
-  // NOVA FUNÇÃO: Atualiza um detalhe específico do lead fechado
-  // (Prêmio Líquido, Comissão, Parcelamento, Seguradora temporária)
-  const onUpdateDetalhesFechados = async (id, campo, valor) => {
-    // Atualiza otimisticamente o estado local
-    setLeads((prevLeads) =>
-      prevLeads.map((lead) => {
-        if (String(lead.ID) === String(id)) {
-          // Mapeia o nome do campo recebido para a chave correta no estado
-          const updatedLead = { ...lead };
-          switch (campo) {
-            case 'PremioLiquido':
-              updatedLead.PremioLiquido = valor;
-              updatedLead.premioliquido = valor; // Também atualiza a chave camelCase
-              break;
-            case 'Comissao':
-              updatedLead.Comissao = valor;
-              updatedLead.comissao = valor; // Também atualiza a chave camelCase
-              break;
-            case 'Parcelamento':
-              updatedLead.Parcelamento = valor;
-              updatedLead.parcelamento = valor; // Também atualiza a chave camelCase
-              break;
-            case 'Seguradora': // Para o caso de atualizarmos a seguradora antes da confirmação final
-              updatedLead.Seguradora = valor;
-              updatedLead.insurer = valor;
-              break;
-            default:
-              break;
-          }
-          return updatedLead;
-        }
-        return lead;
-      })
-    );
-
-    // Nota: Esta função não faz um POST direto para o Sheets.
-    // Ela apenas atualiza o estado local. O POST para o Sheets
-    // acontece apenas quando `confirmarSeguradoraLead` é chamada.
-    // Isso é importante para evitar múltiplos envios para o Sheets
-    // a cada digitação/seleção.
-  };
-
-
-  // Função para confirmar seguradora do lead (COM no-cors)
-  const confirmarSeguradoraLead = async (id, premioLiquido, seguradora, comissao, parcelamento) => {
-    const leadToUpdate = leads.find((l) => String(l.ID) === String(id) || String(l.id) === String(id));
-
-    if (!leadToUpdate) {
-      console.error("Lead não encontrado para confirmação de seguradora (ID:", id, ").");
-      return;
-    }
-
-    // Otimisticamente atualiza o estado local (já garantindo que as chaves do Sheet estejam corretas)
-    setLeads((prevLeads) =>
-      prevLeads.map((l) =>
-        String(l.ID) === String(id) || String(l.id) === String(id)
-          ? {
-              ...l,
-              Seguradora: seguradora,
-              PremioLiquido: premioLiquido,
-              Comissao: comissao,
-              Parcelamento: parcelamento,
-              insurerConfirmed: true,
-              // As chaves camelCase também são atualizadas para consistência interna
-              insurer: seguradora,
-              premioliquido: premioLiquido,
-              comissao: comissao,
-              parcelamento: parcelamento,
-            }
-          : l
-      )
-    );
-
-    try {
-      const payload = {
-        action: 'alterar_seguradora',
-        lead: {
-          ID: String(id), // ID do lead para o Apps Script
-          Seguradora: seguradora,
-          PremioLiquido: premioLiquido,
-          Comissao: comissao,
-          Parcelamento: parcelamento,
-        },
-      };
-
-      console.log("Enviando confirmação de seguradora (POST com no-cors):", payload);
-      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Requisição de confirmação de seguradora enviada. Verifique os logs do GAS.");
-
-      setTimeout(() => {
-        fetchLeadsFromSheet();
-      }, 100);
-
-    } catch (error) {
-      console.error('Erro ao enviar lead fechado para atualização de seguradora:', error);
-      alert('Erro de rede ao confirmar seguradora do lead.');
-      fetchLeadsFromSheet();
-    }
-  };
-
-  // Função para transferir lead (COM no-cors)
-  const transferirLead = async (leadId, responsavelId) => {
-    let responsavelNome = null;
-    let usuario = usuarios.find((u) => String(u.id) === String(responsavelId));
-    if (usuario) {
-      responsavelNome = usuario.nome;
-    } else {
-      console.warn("Usuário responsável não encontrado para ID:", responsavelId);
-      alert("Usuário responsável não encontrado. Verifique a lista de usuários.");
-      return;
-    }
-
-    // Otimisticamente atualiza o estado local
-    setLeads((prev) =>
-      prev.map((lead) =>
-        String(lead.id) === String(leadId) ? { ...lead, responsavel: responsavelNome, Responsavel: responsavelNome } : lead
-      )
-    );
-
-    try {
-      const payload = {
-        action: 'alterar_atribuido',
-        id: leadId,
-        usuarioId: String(responsavelId),
-      };
-
-      console.log("Enviando transferência de lead (POST com no-cors):", payload);
-      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        mode: 'no-cors',
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Requisição de transferência de lead enviada. Verifique os logs do GAS.");
-
-      setTimeout(() => {
-        fetchLeadsFromSheet();
-      }, 100);
-
-    } catch (error) {
-      console.error('Erro ao transferir lead no Sheets:', error);
-      alert('Erro de rede ao transferir lead.');
-      fetchLeadsFromSheet();
-    }
-  };
-
-  // Função para atualizar status/tipo do usuário (COM no-cors)
-  const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
-    const usuario = usuarios.find((u) => String(u.id) === String(id));
-    if (!usuario) {
-      console.warn("Usuário não encontrado para atualização de status/tipo.");
-      return;
-    }
-
-    // Otimisticamente atualiza o estado local
-    setUsuarios((prev) =>
-      prev.map((u) =>
-        String(u.id) === String(id)
-          ? {
-              ...u,
-              ...(novoStatus !== null ? { status: novoStatus } : {}),
-              ...(novoTipo !== null ? { tipo: novoTipo } : {}),
-            }
-          : u
-      )
-    );
-
-    try {
-      const payload = {
-        action: 'alterar_usuario',
-        usuario: {
-          id: String(id),
-          status: novoStatus,
-          tipo: novoTipo,
-        },
-      };
-
-      console.log("Enviando atualização de status/tipo do usuário (POST com no-cors):", payload);
-      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        mode: 'no-cors',
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Requisição de atualização de usuário enviada. Verifique os logs do GAS.");
-
-      setTimeout(() => {
-        fetchUsuariosFromSheet();
-      }, 100);
-
-    } catch (error) {
-      console.error('Erro ao atualizar status/tipo do usuário no Sheets:', error);
-      alert('Erro de rede ao atualizar status/tipo do usuário.');
-      fetchUsuariosFromSheet();
-    }
-  };
-
-  const onAbrirLead = (lead) => {
-    setLeadSelecionado(lead);
-
-    let path = '/leads';
-    if (lead.status === 'Fechado') path = '/leads-fechados';
-    else if (lead.status === 'Perdido') path = '/leads-perdidos';
-
-    navigate(path);
-  };
-
-  const handleLogin = () => {
-    console.log("-----------------------------------");
-    console.log("Tentativa de Login Iniciada:");
-    console.log("Login digitado (input):", loginInput);
-    console.log("Senha digitada (input):", senhaInput);
-    console.log("Usuários carregados no estado 'usuarios':", usuarios);
-    console.log("-----------------------------------");
-
-    const usuarioEncontrado = usuarios.find(
-      (u) => {
-        const isUserMatch = String(u.usuario).trim() === loginInput.trim();
-        const isPassMatch = String(u.senha).trim() === senhaInput.trim();
-        const isActive = String(u.status).trim() === 'Ativo';
-
-        console.log(`Comparando usuário: '${String(u.usuario).trim()}' (Sheet) === '${loginInput.trim()}' (Input) -> Match User: ${isUserMatch}`);
-        console.log(`Comparando senha:   '${String(u.senha).trim()}' (Sheet) === '${senhaInput.trim()}' (Input) -> Match Pass: ${isPassMatch}`);
-        console.log(`Comparando status:  '${String(u.status).trim()}' (Sheet) === 'Ativo' -> Is Active: ${isActive}`);
-
-        return isUserMatch && isPassMatch && isActive;
-      }
-    );
-
-    if (usuarioEncontrado) {
-      setIsAuthenticated(true);
-      setUsuarioLogado(usuarioEncontrado);
-      console.log("Login bem-sucedido! Usuário logado:", usuarioEncontrado);
-      navigate('/dashboard');
-    } else {
-      alert('Login ou senha inválidos, ou usuário inativo.');
-      console.log("Falha no login: Usuário não encontrado, senha incorreta ou inativo.");
-    }
-  };
-
-  const PrivateRoute = ({ children }) => {
-    return isAuthenticated ? children : <Navigate to="/login" replace />;
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div
-        className={`flex items-center justify-center min-h-screen bg-cover bg-center transition-opacity duration-1000 ${
-          backgroundLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          backgroundImage: `url('/background.png')`,
-        }}
-      >
-        <div className="bg-blue-900 bg-opacity-60 text-white p-10 rounded-2xl shadow-2xl w-full max-w-sm">
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-12 h-12 mb-2 flex items-center justify-center text-4xl text-yellow-400">
-              👑
-            </div>
-            <h1 className="text-xl font-semibold">GRUPO</h1>
-            <h2 className="text-2xl font-bold text-white">PRIMME SEGUROS</h2>
-            <p className="text-sm text-white">CORRETORA DE SEGUROS</p>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Usuário"
-            value={loginInput}
-            onChange={(e) => setLoginInput(e.target.value)}
-            className="w-full mb-4 px-4 py-2 rounded text-black"
-          />
-          <input
-            type="password"
-            placeholder="Senha"
-            value={senhaInput}
-            onChange={(e) => setSenhaInput(e.target.value)}
-            className="w-full mb-2 px-4 py-2 rounded text-black"
-          />
-          <div className="text-right text-sm mb-4">
-            <a href="#" className="text-white underline">
-              Esqueci minha senha
-            </a>
-          </div>
-          <button
-            onClick={handleLogin}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            ENTRAR
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const isAdmin = usuarioLogado?.tipo === 'Admin';
-
-  return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      <Sidebar isAdmin={isAdmin} usuarioLogado={usuarioLogado} />
-
-      <main style={{ flex: 1, overflow: 'auto' }}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard
-                  leadsClosed={
-                    isAdmin
-                      ? leads.filter(lead => lead.Status === 'Fechado') // Use 'Status' aqui também
-                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim() && lead.Status === 'Fechado')
-                  }
-                  leads={
-                    isAdmin
-                      ? leads
-                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())
-                  }
-                  usuarioLogado={usuarioLogado}
-                />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/leads"
-            element={
-              <PrivateRoute>
-                <Leads
-                  leads={isAdmin ? leads : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())}
-                  usuarios={usuarios}
-                  onUpdateStatus={atualizarStatusLead}
-                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
-                  transferirLead={transferirLead}
-                  usuarioLogado={usuarioLogado}
-                />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/leads-fechados"
-            element={
-              <PrivateRoute>
-                <LeadsFechados
-                  leads={
-                    isAdmin
-                      ? leads.filter(lead => lead.Status === 'Fechado') // Filtra por 'Status'
-                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim() && lead.Status === 'Fechado')
-                  }
-                  usuarios={usuarios}
-                  onConfirmInsurer={confirmarSeguradoraLead}
-                  onUpdateDetalhes={onUpdateDetalhesFechados} // Adicionada esta função
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Renomeado para onRefreshLeads na prop, mas a função é fetchLeadsFromSheet
-                  isAdmin={isAdmin}
-                  onAbrirLead={onAbrirLead}
-                  leadSelecionado={leadSelecionado}
-                />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/leads-perdidos"
-            element={
-              <PrivateRoute>
-                <LeadsPerdidos
-                  leads={
-                    isAdmin
-                      ? leads.filter(lead => lead.Status === 'Perdido') // Filtra por 'Status'
-                      : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim() && lead.Status === 'Perdido')
-                  }
-                  usuarios={usuarios}
-                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
-                  onAbrirLead={onAbrirLead}
-                  isAdmin={isAdmin}
-                  leadSelecionado={leadSelecionado}
-                />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/buscar-lead"
-            element={
-              <PrivateRoute>
-                <BuscarLead
-                  leads={leads}
-                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
-                />
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/criar-lead"
-            element={<PrivateRoute><CriarLead adicionarLead={adicionarLead} googleSheetsPostUrl={GOOGLE_SHEETS_POST_ACTION_URL} usuarioLogado={usuarioLogado} onRefreshLeads={fetchLeadsFromSheet} /></PrivateRoute>}
-          />
-
-          {isAdmin && (
-            <>
-              <Route path="/criar-usuario" element={<PrivateRoute><CriarUsuario adicionarUsuario={adicionarUsuario} googleSheetsPostUrl={GOOGLE_SHEETS_POST_ACTION_URL} fetchUsuariosFromSheet={fetchUsuariosFromSheet} /></PrivateRoute>} />
-              <Route
-                path="/usuarios"
-                element={
-                  <PrivateRoute>
-                    <Usuarios
-                      leads={isAdmin ? leads : leads.filter(lead => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())}
-                      usuarios={usuarios}
-                      onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
-                      atualizarStatusUsuario={atualizarStatusUsuario}
-                    />
-                  </PrivateRoute>
+    const navigate = useNavigate();
+
+    // Estados de autenticação
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loginInput, setLoginInput] = useState('');
+    const [senhaInput, setSenhaInput] = useState('');
+    const [usuarioLogado, setUsuarioLogado] = useState(null);
+
+    // Estado para carregamento da imagem de fundo
+    const [backgroundLoaded, setBackgroundLoaded] = useState(false);
+
+    // Estados para dados do Google Sheets
+    const [leads, setLeads] = useState([]);
+    const [leadsFechados, setLeadsFechados] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
+    
+    // Estado para o lead selecionado ao abrir detalhes
+    const [leadSelecionado, setLeadSelecionado] = useState(null);
+
+    // Carregar imagem de fundo
+    useEffect(() => {
+        const img = new Image();
+        img.src = '/background.png';
+        img.onload = () => setBackgroundLoaded(true);
+    }, []);
+
+    // Função para buscar leads da planilha
+    const fetchLeadsFromSheet = useCallback(async () => {
+        try {
+            const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL);
+            const data = await response.json();
+
+            if (Array.isArray(data)) {
+                // Ordena o array por 'editado' (mais recente primeiro)
+                const sortedData = data.sort((a, b) => {
+                    const dateA = new Date(a.editado);
+                    const dateB = new Date(b.editado);
+                    return dateB - dateA; // decrescente (mais recente no topo)
+                });
+
+                const formattedLeads = sortedData.map((item, index) => ({
+                    id: item.id ? Number(item.id) : index + 1,
+                    name: item.name || item.Name || '',
+                    vehicleModel: item.vehiclemodel || '',
+                    vehicleYearModel: item.vehicleyearmodel || '',
+                    city: item.city || '',
+                    phone: item.phone || item.Telefone || '',
+                    insuranceType: item.insurancetype || '',
+                    status: item.status || 'Selecione o status',
+                    confirmado: item.confirmado === 'true' || item.confirmado === true,
+                    insurer: item.insurer || '',
+                    insurerConfirmed: item.insurerConfirmed === 'true' || item.insurerConfirmed === true,
+                    usuarioId: item.usuarioId ? Number(item.usuarioId) : null,
+                    premioLiquido: item.premioLiquido || '',
+                    comissao: item.comissao || '',
+                    parcelamento: item.parcelamento || '',
+                    createdAt: item.data || new Date().toISOString(),
+                    responsavel: item.responsavel || '',
+                    editado: item.editado || ''
+                }));
+                
+                // Atualiza leads apenas se nenhum lead estiver sendo editado
+                if (!leadSelecionado) {
+                    setLeads(formattedLeads);
                 }
-              />
-            </>
-          )}
-          <Route
-            path="/ranking"
-            element={
-              <PrivateRoute>
-                <Ranking
-                  usuarios={usuarios}
-                  onRefreshLeads={fetchLeadsFromSheet} // Renomeado para clareza
-                  leads={leads}
-                />
-              </PrivateRoute>
+            } else {
+                if (!leadSelecionado) {
+                    setLeads([]);
+                }
             }
-          />
-          <Route path="*" element={<h1 style={{ padding: 20 }}>Página não encontrada</h1>} />
-        </Routes>
-      </main>
-    </div>
-  );
+        } catch (error) {
+            console.error('Erro ao buscar leads:', error);
+            if (!leadSelecionado) {
+                setLeads([]);
+            }
+        }
+    }, [leadSelecionado]); // leadSelecionado como dependência para evitar re-fetch desnecessário
+
+    // Função para buscar leads fechados da planilha
+    const fetchLeadsFechadosFromSheet = useCallback(async () => {
+        try {
+            const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS);
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                setLeadsFechados(data);
+            } else {
+                setLeadsFechados([]);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar leads fechados:', error);
+            setLeadsFechados([]);
+        }
+    }, []);
+
+    // Função para buscar usuários da planilha
+    const fetchUsuariosFromSheet = useCallback(async () => {
+        try {
+            const response = await fetch(GOOGLE_SHEETS_USERS + '?v=pegar_usuario');
+            const data = await response.json();
+
+            if (Array.isArray(data)) {
+                const formattedUsuarios = data.map((item) => ({
+                    id: item.id || crypto.randomUUID(), // Usar UUID se o ID não existir
+                    usuario: item.usuario || '',
+                    nome: item.nome || '',
+                    email: item.email || '',
+                    senha: item.senha || '',
+                    status: item.status || 'Ativo',
+                    tipo: item.tipo || 'Usuario',
+                }));
+                setUsuarios(formattedUsuarios);
+            } else {
+                setUsuarios([]);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar usuários do Google Sheets:', error);
+            setUsuarios([]);
+        }
+    }, []);
+
+    // Efeitos para sincronização inicial e em intervalo
+    useEffect(() => {
+        fetchLeadsFromSheet();
+        const interval = setInterval(fetchLeadsFromSheet, 60000);
+        return () => clearInterval(interval);
+    }, [fetchLeadsFromSheet]);
+
+    useEffect(() => {
+        fetchLeadsFechadosFromSheet();
+        const interval = setInterval(fetchLeadsFechadosFromSheet, 60000);
+        return () => clearInterval(interval);
+    }, [fetchLeadsFechadosFromSheet]);
+
+    useEffect(() => {
+        fetchUsuariosFromSheet();
+        const interval = setInterval(fetchUsuariosFromSheet, 60000);
+        return () => clearInterval(interval);
+    }, [fetchUsuariosFromSheet]);
+
+
+    // Adicionar um novo usuário (usado em CriarUsuario)
+    const adicionarUsuario = (usuario) => {
+        setUsuarios((prev) => [...prev, { ...usuario, id: crypto.randomUUID() }]); // Garante um ID único
+    };
+
+    // Atualiza o status de um lead e gerencia a lista de leads fechados
+    const atualizarStatusLead = useCallback((id, novoStatus, phone) => {
+        setLeads((prevLeads) => {
+            const updatedLeads = prevLeads.map((lead) =>
+                lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
+            );
+
+            // Se o status for "Fechado", adiciona/atualiza nos leads fechados
+            if (novoStatus === 'Fechado') {
+                const leadToClose = updatedLeads.find((lead) => lead.phone === phone);
+                if (leadToClose) {
+                    setLeadsFechados((prevFechados) => {
+                        const existingClosedLead = prevFechados.find((closedLead) => closedLead.phone === phone);
+                        if (existingClosedLead) {
+                            return prevFechados.map((closedLead) =>
+                                closedLead.phone === phone ? { ...closedLead, Status: novoStatus, confirmado: true } : closedLead
+                            );
+                        } else {
+                            // Mapeia para o formato esperado pelos leads fechados
+                            const newClosedLead = {
+                                ID: leadToClose.id || crypto.randomUUID(),
+                                name: leadToClose.name,
+                                vehicleModel: leadToClose.vehicleModel,
+                                vehicleYearModel: leadToClose.vehicleYearModel,
+                                city: leadToClose.city,
+                                phone: leadToClose.phone,
+                                insurer: leadToClose.insuranceType || leadToClose.insurer || '', // Prioriza insuranceType, fallback para insurer
+                                Data: leadToClose.createdAt || new Date().toISOString(),
+                                Responsavel: leadToClose.responsavel || '',
+                                Status: "Fechado",
+                                Seguradora: leadToClose.insurer || '', // Reutiliza insurer para Seguradora
+                                PremioLiquido: leadToClose.premioLiquido || '',
+                                Comissao: leadToClose.comissao || '',
+                                Parcelamento: leadToClose.parcelamento || '',
+                                confirmado: true,
+                                // Adicione outras propriedades necessárias para LeadsFechados se forem diferentes
+                            };
+                            return [...prevFechados, newClosedLead];
+                        }
+                    });
+                }
+            }
+            return updatedLeads;
+        });
+    }, []);
+
+
+    // Limpa campos específicos de um lead
+    const limparCamposLead = (lead) => ({
+        ...lead,
+        premioLiquido: "",
+        comissao: "",
+        parcelamento: "",
+    });
+
+    // Atualiza a seguradora de um lead
+    const atualizarSeguradoraLead = useCallback((id, seguradora) => {
+        setLeads((prev) =>
+            prev.map((lead) =>
+                lead.id === id
+                    ? limparCamposLead({ ...lead, insurer: seguradora })
+                    : lead
+            )
+        );
+    }, []);
+
+    // Confirma a seguradora e envia os dados para a planilha
+    const confirmarSeguradoraLead = useCallback(async (id, premio, seguradora, comissao, parcelamento) => {
+        // Encontra o lead nos leads fechados (eles já estão no formato esperado ou podem ser adaptados)
+        const lead = leadsFechados.find((l) => l.ID == id);
+
+        if (!lead) {
+            console.error("Lead não encontrado para confirmação de seguradora.");
+            return;
+        }
+
+        // Atualiza os dados do lead
+        const updatedLead = {
+            ...lead,
+            Seguradora: seguradora,
+            PremioLiquido: premio,
+            Comissao: comissao,
+            Parcelamento: parcelamento,
+            insurerConfirmed: true // Atualiza o status de confirmação
+        };
+
+        // Atualiza localmente a lista de leads fechados
+        setLeadsFechados((prev) =>
+            prev.map((l) => (l.ID === id ? updatedLead : l))
+        );
+
+        try {
+            await fetch(GOOGLE_SHEETS_ALTERAR_SEGURADORA, {
+                method: 'POST',
+                mode: 'no-cors', // Considere mudar para 'cors' se precisar ler a resposta
+                body: JSON.stringify({ lead: updatedLead }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            // Opcional: Recarregar leads fechados após a atualização para garantir consistência
+            // fetchLeadsFechadosFromSheet(); 
+        } catch (error) {
+            console.error('Erro ao enviar lead para Apps Script:', error);
+            alert('Erro ao salvar os dados da seguradora. Tente novamente.'); // Feedback para o usuário
+        }
+    }, [leadsFechados]);
+
+    // Atualiza detalhes de um lead fechado (presume-se que seja para LeadsFechados)
+    const atualizarDetalhesLeadFechado = useCallback((id, campo, valor) => {
+        setLeadsFechados((prev) =>
+            prev.map((lead) =>
+                lead.ID === id ? { ...lead, [campo]: valor } : lead
+            )
+        );
+    }, []);
+
+    // Transfere a responsabilidade de um lead para outro usuário
+    const transferirLead = useCallback((leadId, responsavelId) => {
+        let responsavelNome = null;
+        if (responsavelId !== null) {
+            const usuario = usuarios.find((u) => u.id == responsavelId);
+            if (!usuario) {
+                console.warn(`Usuário com ID ${responsavelId} não encontrado.`);
+                return;
+            }
+            responsavelNome = usuario.nome;
+        }
+
+        setLeads((prev) =>
+            prev.map((lead) =>
+                lead.id === leadId ? { ...lead, responsavel: responsavelNome } : lead
+            )
+        );
+    }, [usuarios]);
+
+    // Atualiza o status ou tipo de um usuário
+    const atualizarStatusUsuario = useCallback(async (id, novoStatus = null, novoTipo = null) => {
+        const usuario = usuarios.find((u) => u.id === id);
+        if (!usuario) {
+            console.error("Usuário não encontrado para atualização.");
+            return;
+        }
+
+        const updatedUsuario = { ...usuario };
+        if (novoStatus !== null) updatedUsuario.status = novoStatus;
+        if (novoTipo !== null) updatedUsuario.tipo = novoTipo;
+
+        try {
+            await fetch(GOOGLE_SHEETS_ALTERAR_USUARIO, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ usuario: updatedUsuario }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            // Atualizar localmente
+            setUsuarios((prev) =>
+                prev.map((u) => (u.id === id ? updatedUsuario : u))
+            );
+        } catch (error) {
+            console.error('Erro ao atualizar usuário no Apps Script:', error);
+            alert('Erro ao atualizar o usuário. Tente novamente.');
+        }
+    }, [usuarios]);
+
+    // Função para abrir os detalhes de um lead e navegar para a rota correta
+    const onAbrirLead = useCallback((lead) => {
+        setLeadSelecionado(lead);
+        let path = '/leads';
+        if (lead.status === 'Fechado') path = '/leads-fechados';
+        else if (lead.status === 'Perdido') path = '/leads-perdidos';
+        navigate(path);
+    }, [navigate]);
+
+    // Lógica de autenticação
+    const handleLogin = () => {
+        const usuarioEncontrado = usuarios.find(
+            (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
+        );
+
+        if (usuarioEncontrado) {
+            setIsAuthenticated(true);
+            setUsuarioLogado(usuarioEncontrado);
+        } else {
+            alert('Login ou senha inválidos ou usuário inativo.');
+        }
+    };
+
+    // Renderiza a tela de login se não estiver autenticado
+    if (!isAuthenticated) {
+        return (
+            <div
+                className={`flex items-center justify-center min-h-screen bg-cover bg-center transition-opacity duration-1000 ${
+                    backgroundLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{
+                    backgroundImage: `url('/background.png')`,
+                }}
+            >
+                <div className="bg-blue-900 bg-opacity-60 text-white p-10 rounded-2xl shadow-2xl w-full max-w-sm">
+                    <div className="flex flex-col items-center mb-6">
+                        <div className="w-12 h-12 mb-2 flex items-center justify-center text-4xl text-yellow-400">
+                            👑
+                        </div>
+                        <h1 className="text-xl font-semibold">GRUPO</h1>
+                        <h2 className="text-2xl font-bold text-white">PRIMME SEGUROS</h2>
+                        <p className="text-sm text-white">CORRETORA DE SEGUROS</p>
+                    </div>
+
+                    <input
+                        type="text"
+                        placeholder="Usuário"
+                        value={loginInput}
+                        onChange={(e) => setLoginInput(e.target.value)}
+                        className="w-full mb-4 px-4 py-2 rounded text-black"
+                    />
+                    <input
+                        type="password"
+                        placeholder="Senha"
+                        value={senhaInput}
+                        onChange={(e) => setSenhaInput(e.target.value)}
+                        className="w-full mb-2 px-4 py-2 rounded text-black"
+                    />
+                    <div className="text-right text-sm mb-4">
+                        <a href="#" className="text-white underline">
+                            Esqueci minha senha
+                        </a>
+                    </div>
+                    <button
+                        onClick={handleLogin}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                        ENTRAR
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Determina se o usuário logado é um administrador
+    const isAdmin = usuarioLogado?.tipo === 'Admin';
+
+    return (
+        <div style={{ display: 'flex', height: '100vh' }}>
+            <Sidebar isAdmin={isAdmin} nomeUsuario={usuarioLogado} />
+
+            <main style={{ flex: 1, overflow: 'auto' }}>
+                <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route
+                        path="/dashboard"
+                        element={
+                            <Dashboard
+                                leadsClosed={
+                                    isAdmin
+                                        ? leadsFechados
+                                        : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
+                                }
+                                leads={
+                                    isAdmin
+                                        ? leads
+                                        : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
+                                }
+                                usuarioLogado={usuarioLogado}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/leads"
+                        element={
+                            <Leads
+                                leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                                usuarios={usuarios}
+                                onUpdateStatus={atualizarStatusLead}
+                                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                                transferirLead={transferirLead}
+                                usuarioLogado={usuarioLogado}
+                                onAbrirLead={onAbrirLead} // Adicionado para permitir abrir leads de dentro do Leads
+                                leadSelecionado={leadSelecionado} // Passando lead selecionado
+                            />
+                        }
+                    />
+                    <Route
+                        path="/leads-fechados"
+                        element={
+                            <LeadsFechados
+                                leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)}
+                                usuarios={usuarios}
+                                onUpdateInsurer={atualizarSeguradoraLead}
+                                onConfirmInsurer={confirmarSeguradoraLead}
+                                onUpdateDetalhes={atualizarDetalhesLeadFechado}
+                                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                                isAdmin={isAdmin}
+                                onAbrirLead={onAbrirLead}
+                                leadSelecionado={leadSelecionado}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/leads-perdidos"
+                        element={
+                            <LeadsPerdidos
+                                leads={isAdmin ? leads : leads.filter((lead) => lead.responsavel === usuarioLogado.nome)}
+                                usuarios={usuarios}
+                                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                                onAbrirLead={onAbrirLead}
+                                isAdmin={isAdmin}
+                                leadSelecionado={leadSelecionado}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/buscar-lead"
+                        element={
+                            <BuscarLead
+                                leads={leads}
+                                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                                onAbrirLead={onAbrirLead} // Adicionado para permitir abrir leads de dentro do BuscarLead
+                            />
+                        }
+                    />
+                    {isAdmin && (
+                        <>
+                            <Route path="/criar-usuario" element={<CriarUsuario adicionarUsuario={adicionarUsuario} />} />
+                            <Route
+                                path="/usuarios"
+                                element={
+                                    <Usuarios
+                                        leads={leads} // Não filtra leads aqui para que o admin veja todos os leads relacionados a usuários
+                                        usuarios={usuarios}
+                                        fetchLeadsFromSheet={fetchLeadsFromSheet}
+                                        fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                                        atualizarStatusUsuario={atualizarStatusUsuario}
+                                    />
+                                }
+                            />
+                        </>
+                    )}
+                    <Route
+                        path="/ranking"
+                        element={
+                            <Ranking
+                                usuarios={usuarios}
+                                fetchLeadsFromSheet={fetchLeadsFromSheet}
+                                fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                                leads={leads}
+                            />
+                        }
+                    />
+                    <Route path="*" element={<h1 style={{ padding: 20 }}>Página não encontrada</h1>} />
+                </Routes>
+            </main>
+        </div>
+    );
 };
 
 export default App;
