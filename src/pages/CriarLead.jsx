@@ -40,7 +40,6 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       city: city,
       phone: phone,
       insuranceType: insuranceType,
-      // Os campos abaixo serão enviados como vazios/nulos, conforme solicitado
       status: '', // Definido como string vazia para ser criado em branco na planilha
       confirmado: false,
       insurer: '',
@@ -49,7 +48,7 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       premioLiquido: '',
       comissao: '',
       parcelamento: '',
-      createdAt: '', // Definido como string vazia para ser criado em branco na planilha
+      createdAt: now.toISOString(), // AGORA: Data de criação baseada no dia e horário atuais
       responsavel: '', // Definido como string vazia para ser criado em branco na planilha
       editado: '' // Definido como string vazia para ser criado em branco na planilha
     };
@@ -178,12 +177,9 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
           className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           <option value="">Selecione o Tipo de Seguro</option>
-          <option value="Auto">Auto</option>
-          <option value="Residencial">Residencial</option>
-          <option value="Vida">Vida</option>
-          <option value="Empresarial">Empresarial</option>
-          <option value="Viagem">Viagem</option>
-          <option value="Outro">Outro</option>
+          <option value="Novo">Novo</option>
+          <option value="Renovacao">Renovação</option>
+          <option value="Indicacao">Indicação</option>
         </select>
       </div>
 
