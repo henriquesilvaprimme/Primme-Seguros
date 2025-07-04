@@ -25,7 +25,8 @@ const App = () => {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginInput, setLoginInput] = useState('');
-  const [senhaInput, setSenhaInput] = '';
+  // CORREÇÃO AQUI: Adicionado useState('') para setSenhaInput
+  const [senhaInput, setSenhaInput] = useState(''); 
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [leadsFechados, setLeadsFechados] = useState([]);
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
@@ -38,7 +39,7 @@ const App = () => {
 
   // INÍCIO - sincronização leads via Google Sheets
   const [leads, setLeads] = useState([]);
-  const [leadSelecionado, setLeadSelecionado] = useState(null); // movido para cá para usar no useEffect
+  const [leadSelecionado, setLeadSelecionado] = useState(null); 
 
   const fetchLeadsFromSheet = async () => {
     try {
@@ -77,20 +78,18 @@ const App = () => {
 
         console.log("Leads Formatados:", formattedLeads);
 
-        // Apenas atualiza o estado se for diferente do que já está lá para evitar loop com leadSelecionado
-        // Este if/else garante que setLeads sempre receberá um array
         if (!leadSelecionado || leadSelecionado.id !== formattedLeads.find(l => l.id === leadSelecionado.id)?.id) {
           setLeads(formattedLeads);
         } else {
-          setLeads(formattedLeads); // Garante que o estado é atualizado mesmo com lead selecionado se os dados mudarem
+          setLeads(formattedLeads);
         }
       } else {
         console.error('Dados de leads não são um array ou estão em formato inesperado:', data);
-        setLeads([]); // Garante que é sempre um array vazio em caso de dados inesperados
+        setLeads([]);
       }
     } catch (error) {
       console.error('Erro ao buscar leads do Google Sheets:', error);
-      setLeads([]); // Garante que é sempre um array vazio em caso de erro na requisição
+      setLeads([]);
     }
   };
 
@@ -102,7 +101,7 @@ const App = () => {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [leadSelecionado]); // Dependência adicionada para que o fetch re-execute se leadSelecionado mudar, mas cuidado com loops
+  }, [leadSelecionado]);
 
 
   const fetchLeadsFechadosFromSheet = async () => {
@@ -114,11 +113,11 @@ const App = () => {
          setLeadsFechados(data.data);
       } else {
         console.error('Dados de leads fechados não são um array ou estão em formato inesperado:', data);
-        setLeadsFechados([]); // Garante que é sempre um array vazio
+        setLeadsFechados([]);
       }
     } catch (error) {
       console.error('Erro ao buscar leads fechados:', error);
-      setLeadsFechados([]); // Garante que é sempre um array vazio
+      setLeadsFechados([]);
     }
   };
 
@@ -155,11 +154,11 @@ const App = () => {
           setUsuarios(formattedUsuarios);
         } else {
           console.error('Dados de usuários não são um array ou estão em formato inesperado:', data);
-          setUsuarios([]); // Garante que é sempre um array vazio
+          setUsuarios([]);
         }
       } catch (error) {
         console.error('Erro ao buscar usuários do Google Sheets:', error);
-        setUsuarios([]); // Garante que é sempre um array vazio
+        setUsuarios([]);
       }
     };
 
@@ -384,7 +383,7 @@ const App = () => {
   const transferirLead = async (leadId, responsavelId) => {
     let responsavelNome = null;
     if (responsavelId !== null) {
-      let usuario = usuarios.find((u) => u.id == responsavelId);
+      let usuario = Array.isArray(usuarios) ? usuarios.find((u) => u.id == responsavelId) : null; // Adiciona verificação aqui
       if (!usuario) {
         console.warn("Usuário responsável não encontrado para ID:", responsavelId);
         return;
@@ -426,7 +425,7 @@ const App = () => {
 
 
   const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
-    const usuario = usuarios.find((usuario) => usuario.id === id);
+    const usuario = Array.isArray(usuarios) ? usuarios.find((usuario) => usuario.id === id) : null; // Adiciona verificação aqui
     if (!usuario) return;
 
     const usuarioAtualizado = { ...usuario };
@@ -472,7 +471,6 @@ const App = () => {
   };
 
   const handleLogin = () => {
-    // Adicione uma verificação de array antes de usar .find
     const usuarioEncontrado = Array.isArray(usuarios) ? usuarios.find(
       (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
     ) : null;
@@ -567,7 +565,7 @@ const App = () => {
             element={
               <Leads
                 leads={isAdmin ? (Array.isArray(leads) ? leads : []) : (Array.isArray(leads) ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome) : [])}
-                usuarios={Array.isArray(usuarios) ? usuarios : []} // Verificação adicionada
+                usuarios={Array.isArray(usuarios) ? usuarios : []}
                 onUpdateStatus={atualizarStatusLead}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
                 transferirLead={transferirLead}
@@ -580,7 +578,7 @@ const App = () => {
             element={
               <LeadsFechados
                 leads={isAdmin ? (Array.isArray(leadsFechados) ? leadsFechados : []) : (Array.isArray(leadsFechados) ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome) : [])}
-                usuarios={Array.isArray(usuarios) ? usuarios : []} // Verificação adicionada
+                usuarios={Array.isArray(usuarios) ? usuarios : []}
                 onUpdateInsurer={atualizarSeguradoraLead}
                 onConfirmInsurer={confirmarSeguradoraLead}
                 onUpdateDetalhes={atualizarDetalhesLeadFechado}
@@ -597,7 +595,7 @@ const App = () => {
             element={
               <LeadsPerdidos
                 leads={isAdmin ? (Array.isArray(leads) ? leads : []) : (Array.isArray(leads) ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome) : [])}
-                usuarios={Array.isArray(usuarios) ? usuarios : []} // Verificação adicionada
+                usuarios={Array.isArray(usuarios) ? usuarios : []}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
                 onAbrirLead={onAbrirLead}
                 isAdmin={isAdmin}
