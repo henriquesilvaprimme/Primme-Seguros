@@ -10,7 +10,7 @@ const Dashboard = ({ leads }) => {
   const buscarLeads = async () => {
     try {
       const response = await axios.get(
-        'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec'
+        'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw'
       );
       setLeads(response.data);
     } catch (error) {
