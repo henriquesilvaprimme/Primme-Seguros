@@ -12,19 +12,18 @@ import Usuarios from './pages/Usuarios';
 import Ranking from './pages/Ranking';
 import CriarLead from './pages/CriarLead'; // Importa o novo componente CriarLead
 
-// --- URL BASE DO SEU APP WEB GOOGLE APPS SCRIPT ---
-// Esta é a URL principal para todas as suas requisições GAS
-const GAS_BASE_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec';
+//const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeZteouyVWzrCvgHHQttx-5Bekgs_k-5EguO9Sn2p-XFrivFg9S7_gGKLdoDfCa08/exec';
 
-// As URLs específicas agora usam a base e adicionam os parâmetros de ação
-const GOOGLE_SHEETS_SCRIPT_URL = `${GAS_BASE_URL}?v=getLeads`; // Para buscar leads ativos/gerais
-const GOOGLE_SHEETS_USERS = GAS_BASE_URL; // A URL base será usada para criar/buscar usuários com os parâmetros corretos
-const GOOGLE_SHEETS_LEADS_FECHADOS = `${GAS_BASE_URL}?v=pegar_clientes_fechados`; // Para buscar leads fechados
+const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=getLeads';
+const GOOGLE_SHEETS_USERS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const GOOGLE_SHEETS_LEADS_FECHADOS = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados'
 
-// Esta é a URL para o CriarLead.jsx. Ele usa a URL base sem um 'v' ou 'action' específico no URL,
-// pois o Apps Script deve inferir a ação pela ausência do parâmetro 'v' (ou pelo 'action' no body, se preferir uma abordagem mais explícita no body).
-// No seu App.jsx, quando você faz POSTs para salvar/atualizar, usará a URL base e adicionará 'action' como parâmetro.
-const GOOGLE_SHEETS_LEAD_ACTION_URL = GAS_BASE_URL; // Renomeado para ser mais genérico para ações de lead
+// Esta é a URL que o CriarLead.jsx usará.
+// Certifique-se de que este seja o endpoint POST do seu Google Apps Script que lida com a criação de leads.
+// Ele deve ser o mesmo domínio base das outras URLs, mas sem o "?v=" específico.
+// No seu Apps Script, o doPost deve ter uma lógica para 'action=criar_lead'
+const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead';
+
 
 const App = () => {
   const navigate = useNavigate();
@@ -48,7 +47,7 @@ const App = () => {
 
   const fetchLeadsFromSheet = async () => {
     try {
-      const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL); // Usa sua URL com ?v=getLeads
+      const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL); // Usa sua URL original
       const data = await response.json();
 
       console.log("Dados de Leads Recebidos:", data);
@@ -113,7 +112,7 @@ const App = () => {
 
   const fetchLeadsFechadosFromSheet = async () => {
     try {
-      const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS); // Usa sua URL com ?v=pegar_clientes_fechados
+      const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS); // Usa sua URL original
       const data = await response.json();
       console.log("Leads Fechados Recebidos:", data);
       setLeadsFechados(data);
@@ -139,7 +138,7 @@ const App = () => {
   useEffect(() => {
     const fetchUsuariosFromSheet = async () => {
       try {
-        const response = await fetch(`${GOOGLE_SHEETS_USERS}?v=pegar_usuario`); // Usa sua URL base + ?v=pegar_usuario
+        const response = await fetch(GOOGLE_SHEETS_USERS + '?v=pegar_usuario'); // Usa sua URL original + parâmetro
         const data = await response.json();
         console.log("Usuários Recebidos:", data);
 
@@ -176,18 +175,13 @@ const App = () => {
   const [ultimoFechadoId, setUltimoFechadoId] = useState(null);
 
   const adicionarUsuario = (usuario) => {
-    // Adiciona o usuário localmente. O salvamento no Sheets é feito dentro do CriarUsuario.jsx.
     setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
-    // Após adicionar, pode ser útil recarregar os usuários para garantir a sincronização com o Sheet
-    // fetchUsuariosFromSheet(); // Descomente se preferir recarregar imediatamente
   };
 
   // Função para adicionar um NOVO LEAD
   const adicionarLead = (lead) => {
-    // Adiciona o lead localmente. O salvamento no Sheets é feito dentro do CriarLead.jsx.
-    setLeads((prev) => [...prev, lead]);
-    // Após adicionar, pode ser útil recarregar os leads para garantir a sincronização com o Sheet
-    // fetchLeadsFromSheet(); // Descomente se preferir recarregar imediatamente
+    setLeads((prev) => [...prev, lead]); // Adiciona o lead à lista local
+    // O salvamento no Sheets é feito dentro do CriarLead
   };
 
 
@@ -209,7 +203,6 @@ const App = () => {
   };
 
   const atualizarStatusLead = async (id, novoStatus, phone) => {
-    // Atualiza o estado local imediatamente para feedback visual
     setLeads((prev) =>
       prev.map((lead) =>
         lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
@@ -232,7 +225,7 @@ const App = () => {
       phone: leadParaAtualizar.phone,
       insurancetype: leadParaAtualizar.insuranceType,
       status: novoStatus,
-      confirmado: true, // Ou algum valor dinâmico se for o caso
+      confirmado: true,
       insurer: leadParaAtualizar.insurer,
       insurerconfirmed: leadParaAtualizar.insurerConfirmed,
       usuarioid: leadParaAtualizar.usuarioId,
@@ -247,7 +240,7 @@ const App = () => {
 
     try {
       // Usa a URL base do Apps Script com o parâmetro 'action=salvar_lead'
-      await fetch(`${GAS_BASE_URL}?action=salvar_lead`, {
+      await fetch(`${GOOGLE_SHEETS_LEAD_CREATION_URL.split('?')[0]}?action=salvar_lead`, { // Pega a URL base, ignora o ?action=criar_lead e adiciona salvar_lead
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify(updatedLeadData),
@@ -256,8 +249,8 @@ const App = () => {
         },
       });
       console.log(`Status do lead ${id} (${phone}) atualizado para ${novoStatus} no Sheets.`);
-      fetchLeadsFromSheet(); // Recarrega os leads para garantir a sincronização
-      fetchLeadsFechadosFromSheet(); // Recarrega os leads fechados também, caso o status tenha mudado para "Fechado"
+      fetchLeadsFromSheet();
+      fetchLeadsFechadosFromSheet();
 
     } catch (error) {
       console.error('Erro ao atualizar status do lead no Sheets:', error);
@@ -277,13 +270,13 @@ const App = () => {
           const leadParaAdicionar = leads.find((lead) => lead.phone === phone);
           if (leadParaAdicionar) {
             const novoLeadFechado = {
-              ID: leadParaAdicionar.id || crypto.randomUUID(), // Use crypto.randomUUID() para IDs robustos se 'id' não existir
+              ID: leadParaAdicionar.id || crypto.randomUUID(),
               name: leadParaAdicionar.name,
               vehicleModel: leadParaAdicionar.vehicleModel,
               vehicleYearModel: leadParaAdicionar.vehicleYearModel,
               city: leadParaAdicionar.city,
               phone: leadParaAdicionar.phone,
-              insurer: leadParaAdicionar.insuranceType || "", // Note que aqui 'insurer' está pegando de 'insuranceType'
+              insurer: leadParaAdicionar.insuranceType || "",
               Data: leadParaAdicionar.createdAt || new Date().toISOString(),
               Responsavel: leadParaAdicionar.responsavel || "",
               Status: "Fechado",
@@ -291,13 +284,12 @@ const App = () => {
               PremioLiquido: leadParaAdicionar.premioLiquido || "",
               Comissao: leadParaAdicionar.comissao || "",
               Parcelamento: leadParaAdicionar.parcelamento || "",
-              id: leadParaAdicionar.id || null, // Garante que o ID original esteja aqui se existir
-              // Os campos abaixo provavelmente não são relevantes para leads fechados, mas mantidos para compatibilidade
+              id: leadParaAdicionar.id || null,
               usuario: leadParaAdicionar.usuario || "",
               nome: leadParaAdicionar.nome || "",
               email: leadParaAdicionar.email || "",
               senha: leadParaAdicionar.senha || "",
-              status: leadParaAdicionar.status || "Ativo", // Isso pode ser redundante com Status: "Fechado"
+              status: leadParaAdicionar.status || "Ativo",
               tipo: leadParaAdicionar.tipo || "Usuario",
               "Ativo/Inativo": leadParaAdicionar["Ativo/Inativo"] || "Ativo",
               confirmado: true
@@ -337,7 +329,6 @@ const App = () => {
       return;
     }
 
-    // Atualiza os dados localmente
     lead.Seguradora = seguradora;
     lead.PremioLiquido = premio;
     lead.Comissao = comissao;
@@ -353,7 +344,7 @@ const App = () => {
 
     try {
       // Usa a URL base do Apps Script com o parâmetro 'action=alterar_seguradora'
-      await fetch(`${GAS_BASE_URL}?action=alterar_seguradora`, {
+      await fetch(`${GOOGLE_SHEETS_LEAD_CREATION_URL.split('?')[0]}?action=alterar_seguradora`, { // Pega a URL base
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({ lead: lead }),
@@ -362,7 +353,7 @@ const App = () => {
         },
       });
       console.log('Seguradora e detalhes do lead fechado atualizados no Sheets.');
-      fetchLeadsFechadosFromSheet(); // Recarrega os leads fechados para garantir a sincronização
+      fetchLeadsFechadosFromSheet();
     } catch (error) {
       console.error('Erro ao enviar lead fechado para atualização de seguradora:', error);
       alert('Erro ao confirmar seguradora do lead no servidor.');
@@ -380,7 +371,7 @@ const App = () => {
   const transferirLead = async (leadId, responsavelId) => {
     let responsavelNome = null;
     if (responsavelId !== null) {
-      let usuario = usuarios.find((u) => u.id == responsavelId); // Note o uso de '==' para comparar string com number
+      let usuario = usuarios.find((u) => u.id == responsavelId);
       if (!usuario) {
         console.warn("Usuário responsável não encontrado para ID:", responsavelId);
         return;
@@ -388,7 +379,6 @@ const App = () => {
       responsavelNome = usuario.nome;
     }
 
-    // Atualiza o estado local imediatamente
     setLeads((prev) =>
       prev.map((lead) =>
         lead.id === leadId ? { ...lead, responsavel: responsavelNome } : lead
@@ -402,23 +392,19 @@ const App = () => {
         return;
       }
 
-      // Garante que o objeto enviado tenha o responsável atualizado
-      const transferData = {
-        ...leadParaTransferir,
-        responsavel: responsavelNome
-      };
+      leadParaTransferir.responsavel = responsavelNome;
 
       // Usa a URL base do Apps Script com o parâmetro 'action=transferir_lead'
-      await fetch(`${GAS_BASE_URL}?action=transferir_lead`, {
+      await fetch(`${GOOGLE_SHEETS_LEAD_CREATION_URL.split('?')[0]}?action=transferir_lead`, { // Pega a URL base
         method: 'POST',
         mode: 'no-cors',
-        body: JSON.stringify({ lead: transferData }), // Envia o lead completo com o responsável atualizado
+        body: JSON.stringify({ lead: leadParaTransferir }),
         headers: {
           'Content-Type': 'application/json',
         },
       });
       console.log(`Lead ${leadId} transferido para ${responsavelNome || 'Ninguém'} no Sheets.`);
-      fetchLeadsFromSheet(); // Recarrega os leads para garantir a sincronização
+      fetchLeadsFromSheet();
     } catch (error) {
       console.error('Erro ao transferir lead no Sheets:', error);
       alert('Erro ao transferir lead no servidor.');
@@ -436,7 +422,7 @@ const App = () => {
 
     try {
       // Usa a URL base do Apps Script com o parâmetro 'action=salvar_usuario'
-      await fetch(`${GAS_BASE_URL}?action=salvar_usuario`, {
+      await fetch(`${GOOGLE_SHEETS_LEAD_CREATION_URL.split('?')[0]}?action=salvar_usuario`, { // Pega a URL base
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
@@ -447,7 +433,6 @@ const App = () => {
         },
       });
       console.log(`Status/Tipo do usuário ${id} atualizado no Sheets.`);
-      // Atualiza o estado local após o sucesso da chamada ao GAS
       setUsuarios((prev) =>
         prev.map((u) =>
           u.id === id
