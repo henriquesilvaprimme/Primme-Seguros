@@ -40,7 +40,7 @@ const CriarLead = ({ adicionarLead }) => {
   const enviarLeadParaSheets = async (lead) => {
     // ATENÇÃO: Substitua ESTA URL pela URL DO SEU GOOGLE APPS SCRIPT DEPLOYADO
     // Este é o mesmo conceito da URL do criar_usuario, mas para leads.
-    const urlDoAppsScript = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead'; 
+    const urlDoAppsScript = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec'; 
 
     try {
       const response = await fetch(urlDoAppsScript, {
