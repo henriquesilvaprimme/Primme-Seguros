@@ -2,27 +2,14 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Users, Search, Trophy, UserPlus, UserCircle, PlusCircle } from 'lucide-react';
 
-// Renomeie a prop para 'usuarioLogado' para corresponder ao que você passa do App.jsx
-// E adicione um valor padrão (objeto vazio) para evitar erros de undefined antes do carregamento
-const Sidebar = ({ usuarioLogado }) => {
+const Sidebar = ({ nomeUsuario }) => {
 
-  // Adicione uma verificação para garantir que usuarioLogado existe antes de tentar acessar suas propriedades
-  // Se usuarioLogado for null/undefined, isAdmin será false, o que é seguro.
-  const isAdmin = usuarioLogado?.tipo === 'Admin';
-
-  // Se usuarioLogado ainda for null/undefined, não renderize nada (ou um placeholder)
-  // Isso evita o erro 'Cannot read properties of undefined' no momento da renderização inicial
-  if (!usuarioLogado) {
-    return null; // Ou um spinner, ou uma mensagem de carregamento
-  }
+  const isAdmin = nomeUsuario.tipo === 'Admin';
 
   return (
     <div className="w-64 bg-white shadow-xl border-r border-gray-200 h-full p-6">
       <h2 className="text-xl font-semibold mb-8">
-        {/* Use optional chaining aqui também para máxima segurança,
-            embora o 'if (!usuarioLogado)' acima já ajude.
-            E capitalize o nome do usuário. */}
-        Olá, {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0).toUpperCase() + usuarioLogado.nome.slice(1) : 'Visitante'}
+        Olá, {nomeUsuario.nome.charAt(0).toUpperCase() + nomeUsuario.nome.slice(1)}
       </h2>
 
       <nav className="flex flex-col gap-4">
