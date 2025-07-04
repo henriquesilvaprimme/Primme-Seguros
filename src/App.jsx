@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
@@ -19,7 +19,7 @@ const GOOGLE_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd
 // URLs específicas usando a base (para GET, ainda usam 'v' na URL)
 const GOOGLE_SHEETS_LEADS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=getLeads`; // Para buscar leads
 const GOOGLE_SHEETS_USERS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_usuario`; // Para buscar usuários
-const GOOGLE_SHEETS_LEADS_FECHADOS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`; // Para buscar leads fechados
+// REMOVIDO: const GOOGLE_SHEETS_LEADS_FECHADOS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`; // Esta URL não será mais necessária se 'fetchLeadsFromSheet' buscar todos os leads.
 
 // URL para ações POST (criar/salvar/transferir/alterar), usando a URL base.
 // A ação será passada no corpo do JSON.
@@ -34,8 +34,9 @@ const App = () => {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
 
+  // O estado 'leads' será a fonte de verdade para TODOS os leads
   const [leads, setLeads] = useState([]);
-  const [leadsFechados, setLeadsFechados] = useState([]);
+  // 'leadsFechados' não é mais um estado separado, será filtrado de 'leads' onde for necessário
   const [usuarios, setUsuarios] = useState([]);
   const [leadSelecionado, setLeadSelecionado] = useState(null);
 
@@ -84,11 +85,20 @@ const App = () => {
           parcelamento: item.parcelamento || '',
           createdAt: item.data || new Date().toISOString(),
           responsavel: item.responsavel || '',
-          editado: item.editado || ''
+          editado: item.editado || '',
+          // Mapeamento dos campos do Google Sheet para o componente
+          // Estes devem coincidir com os nomes de coluna do seu Google Sheet para leads fechados
+          ID: item.id ? Number(item.id) : index + 1, // 'ID' é usado no LeadsFechados
+          Data: item.data || new Date().toISOString(), // 'Data' é usado no LeadsFechados
+          Seguradora: item.seguradora || '', // 'Seguradora' é usado no LeadsFechados
+          PremioLiquido: item.premioliquido || '', // 'PremioLiquido' é usado no LeadsFechados
+          Comissao: item.comissao || '', // 'Comissao' é usado no LeadsFechados
+          Parcelamento: item.parcelamento || '', // 'Parcelamento' é usado no LeadsFechados
+          Responsavel: item.responsavel || '', // 'Responsavel' é usado no LeadsFechados
         }));
 
         console.log("Leads Formatados:", formattedLeads);
-        setLeads(formattedLeads); // Sempre atualiza o estado
+        setLeads(formattedLeads); // Sempre atualiza o estado principal
       } else {
         setLeads([]);
         console.warn("Dados de leads não são um array:", data);
@@ -99,29 +109,9 @@ const App = () => {
     }
   }, []); // Dependências vazias, pois a URL é constante
 
-  const fetchLeadsFechadosFromSheet = useCallback(async () => {
-    try {
-      console.log("Fetching closed leads from:", GOOGLE_SHEETS_LEADS_FECHADOS_API);
-      const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS_API);
-
-      if (!response.ok) {
-        console.error(`HTTP error fetching closed leads: ${response.status} - ${response.statusText}`);
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Leads Fechados Recebidos:", data);
-      if (Array.isArray(data)) {
-        setLeadsFechados(data);
-      } else {
-        setLeadsFechados([]);
-        console.warn("Dados de leads fechados não são um array:", data);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar leads fechados:', error);
-      setLeadsFechados([]);
-    }
-  }, []); // Dependências vazias
+  // REMOVIDO: fetchLeadsFechadosFromSheet não é mais um fetch separado,
+  // pois todos os leads vêm de fetchLeadsFromSheet
+  // const fetchLeadsFechadosFromSheet = useCallback(async () => { ... });
 
   const fetchUsuariosFromSheet = useCallback(async () => {
     try {
@@ -165,11 +155,12 @@ const App = () => {
     return () => clearInterval(interval);
   }, [fetchLeadsFromSheet]);
 
-  useEffect(() => {
-    fetchLeadsFechadosFromSheet();
-    const interval = setInterval(fetchLeadsFechadosFromSheet, 60000);
-    return () => clearInterval(interval);
-  }, [fetchLeadsFechadosFromSheet]);
+  // REMOVIDO: Intervalo para fetchLeadsFechadosFromSheet, pois agora faz parte do fetchLeadsFromSheet
+  // useEffect(() => {
+  //   fetchLeadsFechadosFromSheet();
+  //   const interval = setInterval(fetchLeadsFechadosFromSheet, 60000);
+  //   return () => clearInterval(interval);
+  // }, [fetchLeadsFechadosFromSheet]);
 
   useEffect(() => {
     fetchUsuariosFromSheet();
@@ -204,7 +195,7 @@ const App = () => {
       };
 
       console.log("Enviando atualização de status do lead (POST com no-cors):", payload);
-      const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
+      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
         mode: 'no-cors', // Mantido no-cors
         headers: {
@@ -213,17 +204,12 @@ const App = () => {
         body: JSON.stringify(payload),
       });
 
-      // Com no-cors, você não pode ler a resposta do servidor.
-      // Apenas sabe que a requisição foi enviada.
       console.log("Requisição de atualização de status do lead enviada. Verifique os logs do GAS.");
 
-      // Forçamos o refresh dos dados após um pequeno delay,
-      // pois não temos confirmação do servidor.
-      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
+      // Forçamos o refresh dos dados após um pequeno delay
       setTimeout(() => {
-        fetchLeadsFromSheet();
-        fetchLeadsFechadosFromSheet(); 
-      }, 100); // Atraso reduzido para 100 milissegundos
+        fetchLeadsFromSheet(); // Este fetch agora buscará todos os leads, incluindo os fechados/perdidos
+      }, 100);
 
     } catch (error) {
       console.error('Erro ao enviar atualização de status do lead:', error);
@@ -235,25 +221,26 @@ const App = () => {
 
 
   // Função para confirmar seguradora do lead (COM no-cors)
-  const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
-    const lead = leadsFechados.find((l) => String(l.ID) === String(id));
+  const confirmarSeguradoraLead = async (id, premioLiquido, seguradora, comissao, parcelamento) => {
+    // Encontrar o lead correto no estado 'leads' (a única fonte de verdade)
+    const leadToUpdate = leads.find((l) => String(l.ID) === String(id) || String(l.id) === String(id));
 
-    if (!lead) {
-      console.error("Lead fechado não encontrado para confirmação de seguradora.");
+    if (!leadToUpdate) {
+      console.error("Lead não encontrado para confirmação de seguradora (ID:", id, ").");
       return;
     }
 
     // Otimisticamente atualiza o estado local
-    setLeadsFechados((prev) =>
-      prev.map((l) =>
-        String(l.ID) === String(id)
+    setLeads((prevLeads) =>
+      prevLeads.map((l) =>
+        String(l.ID) === String(id) || String(l.id) === String(id)
           ? {
               ...l,
               Seguradora: seguradora,
-              PremioLiquido: premio,
-              Comissao: comissao,
-              Parcelamento: parcelamento,
-              insurerConfirmed: true,
+              PremioLiquido: premioLiquido, // O valor já vem tratado em LeadsFechados
+              Comissao: comissao, // O valor já vem tratado em LeadsFechados
+              Parcelamento: parcelamento, // O valor já vem tratado em LeadsFechados
+              insurerConfirmed: true, // Se aplicável
             }
           : l
       )
@@ -263,16 +250,16 @@ const App = () => {
       const payload = {
         action: 'alterar_seguradora',
         lead: {
-          ID: String(lead.ID),
+          ID: String(id), // ID do lead
           Seguradora: seguradora,
-          PremioLiquido: premio,
+          PremioLiquido: premioLiquido,
           Comissao: comissao,
           Parcelamento: parcelamento,
         },
       };
 
       console.log("Enviando confirmação de seguradora (POST com no-cors):", payload);
-      const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
+      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
         mode: 'no-cors', // Mantido no-cors
         headers: {
@@ -283,15 +270,15 @@ const App = () => {
 
       console.log("Requisição de confirmação de seguradora enviada. Verifique os logs do GAS.");
 
-      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
+      // Força o refresh de TODOS os leads para garantir a consistência
       setTimeout(() => {
-        fetchLeadsFechadosFromSheet(); // Força o refresh
+        fetchLeadsFromSheet();
       }, 100);
 
     } catch (error) {
       console.error('Erro ao enviar lead fechado para atualização de seguradora:', error);
       alert('Erro de rede ao confirmar seguradora do lead.');
-      fetchLeadsFechadosFromSheet();
+      fetchLeadsFromSheet(); // Reverte o estado visual em caso de erro de rede, buscando os dados reais
     }
   };
 
@@ -322,7 +309,7 @@ const App = () => {
       };
 
       console.log("Enviando transferência de lead (POST com no-cors):", payload);
-      const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
+      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -333,9 +320,9 @@ const App = () => {
 
       console.log("Requisição de transferência de lead enviada. Verifique os logs do GAS.");
 
-      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
+      // Força o refresh de TODOS os leads
       setTimeout(() => {
-        fetchLeadsFromSheet(); // Força o refresh
+        fetchLeadsFromSheet();
       }, 100);
 
     } catch (error) {
@@ -352,10 +339,6 @@ const App = () => {
       console.warn("Usuário não encontrado para atualização de status/tipo.");
       return;
     }
-
-    const usuarioAtualizado = { ...usuario };
-    if (novoStatus !== null) usuarioAtualizado.status = novoStatus;
-    if (novoTipo !== null) usuarioAtualizado.tipo = novoTipo;
 
     // Otimisticamente atualiza o estado local
     setUsuarios((prev) =>
@@ -381,7 +364,7 @@ const App = () => {
       };
 
       console.log("Enviando atualização de status/tipo do usuário (POST com no-cors):", payload);
-      const response = await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
+      await fetch(GOOGLE_SHEETS_POST_ACTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -392,9 +375,9 @@ const App = () => {
 
       console.log("Requisição de atualização de usuário enviada. Verifique os logs do GAS.");
 
-      // REDUZIDO PARA 100ms para uma atualização mais "imediata"
+      // Força o refresh dos usuários
       setTimeout(() => {
-        fetchUsuariosFromSheet(); // Força o refresh
+        fetchUsuariosFromSheet();
       }, 100);
 
     } catch (error) {
@@ -516,10 +499,11 @@ const App = () => {
             element={
               <PrivateRoute>
                 <Dashboard
+                  // Leads fechados agora são filtrados do estado 'leads' principal
                   leadsClosed={
                     isAdmin
-                      ? leadsFechados
-                      : leadsFechados.filter((lead) => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())
+                      ? leads.filter(lead => lead.status === 'Fechado')
+                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
                   }
                   leads={
                     isAdmin
@@ -551,12 +535,16 @@ const App = () => {
             element={
               <PrivateRoute>
                 <LeadsFechados
-                  leads={isAdmin ? leadsFechados : leadsFechados.filter((lead) => String(lead.Responsavel).trim() === String(usuarioLogado.nome).trim())}
+                  // Leads fechados agora são filtrados do estado 'leads' principal
+                  leads={
+                    isAdmin
+                      ? leads.filter(lead => lead.status === 'Fechado')
+                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
+                  }
                   usuarios={usuarios}
-                  onUpdateInsurer={() => { /* Remover ou adaptar se não for mais usado */ }}
+                  // onUpdateInsurer e onUpdateDetalhes removidos, pois a lógica está em onConfirmInsurer
                   onConfirmInsurer={confirmarSeguradoraLead}
-                  onUpdateDetalhes={() => { /* Remover ou adaptar se não for mais usado */ }}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
                   isAdmin={isAdmin}
                   onAbrirLead={onAbrirLead}
                   leadSelecionado={leadSelecionado}
@@ -569,7 +557,12 @@ const App = () => {
             element={
               <PrivateRoute>
                 <LeadsPerdidos
-                  leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
+                  // Leads perdidos agora são filtrados do estado 'leads' principal
+                  leads={
+                    isAdmin
+                      ? leads.filter(lead => lead.status === 'Perdido')
+                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Perdido')
+                  }
                   usuarios={usuarios}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
                   onAbrirLead={onAbrirLead}
@@ -586,7 +579,7 @@ const App = () => {
                 <BuscarLead
                   leads={leads}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
                 />
               </PrivateRoute>
             }
@@ -594,7 +587,7 @@ const App = () => {
 
           <Route
             path="/criar-lead"
-            element={<PrivateRoute><CriarLead adicionarLead={adicionarLead} googleSheetsPostUrl={GOOGLE_SHEETS_POST_ACTION_URL} usuarioLogado={usuarioLogado} /></PrivateRoute>}
+            element={<PrivateRoute><CriarLead adicionarLead={adicionarLead} googleSheetsPostUrl={GOOGLE_SHEETS_POST_ACTION_URL} usuarioLogado={usuarioLogado} fetchLeadsFromSheet={fetchLeadsFromSheet} /></PrivateRoute>}
           />
 
           {isAdmin && (
@@ -608,7 +601,7 @@ const App = () => {
                       leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
                       usuarios={usuarios}
                       fetchLeadsFromSheet={fetchLeadsFromSheet}
-                      fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                      fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
                       atualizarStatusUsuario={atualizarStatusUsuario}
                     />
                   </PrivateRoute>
@@ -623,7 +616,7 @@ const App = () => {
                 <Ranking
                   usuarios={usuarios}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} {/* Mantém o nome da prop, mas chama fetchLeadsFromSheet */}
                   leads={leads}
                 />
               </PrivateRoute>
