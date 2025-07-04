@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 // Use a mesma URL base que definimos no App.jsx para criação de leads.
 // Certifique-se de que esta URL aponte para o seu Apps Script e que ele saiba como
 // lidar com a 'action=criar_lead' no método doPost.
-const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec/exec?action=criar_lead'; // Mantenha sua URL real aqui
+const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec?action=criar_lead'; // Mantenha sua URL real aqui
 
 const CriarLead = ({ adicionarLead }) => {
   const [formData, setFormData] = useState({
