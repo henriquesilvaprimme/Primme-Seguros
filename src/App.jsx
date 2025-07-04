@@ -202,66 +202,83 @@ const App = () => {
   };
 
   // Função para atualizar o status de um lead e gerenciar leads fechados
-  const atualizarStatusLead = (id, novoStatus, phone) => {
-    // Atualiza leads principal
+  const atualizarStatusLead = async (id, novoStatus, phone) => { // Tornada async
+    // Encontra o lead a ser atualizado
+    const leadToUpdate = leads.find((lead) => lead.id === id);
+    if (!leadToUpdate) {
+      console.warn("Lead não encontrado para atualização de status.");
+      return;
+    }
+
+    // Cria um objeto de lead atualizado com o novo status e a data de edição
+    const updatedLead = {
+      ...leadToUpdate,
+      status: novoStatus,
+      confirmado: novoStatus === 'Fechado' ? true : leadToUpdate.confirmado, // Define confirmado se for 'Fechado'
+      editado: new Date().toISOString() // Atualiza a data de edição
+    };
+
+    // Atualiza o estado local imediatamente
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
+        lead.id === id ? updatedLead : lead
       )
     );
 
+    // Se o status for 'Fechado', atualiza também a lista de leads fechados
     if (novoStatus === 'Fechado') {
       setLeadsFechados((prev) => {
-        const jaExiste = prev.some((lead) => lead.phone === phone);
+        const jaExiste = prev.some((lead) => lead.id === id); // Verifica pelo ID
 
         if (jaExiste) {
-          // Se já existe, só atualiza
-          const atualizados = prev.map((lead) =>
-            lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
+          return prev.map((lead) =>
+            lead.id === id ? { ...lead, Status: novoStatus, confirmado: true } : lead
           );
-          return atualizados;
         } else {
-          // Se não existe, busca o lead na lista principal e adiciona
-          const leadParaAdicionar = leads.find((lead) => lead.phone === phone);
-
-          if (leadParaAdicionar) {
-            // Monta o objeto no padrão dos fechados
-            const novoLeadFechado = {
-              ID: leadParaAdicionar.id || crypto.randomUUID(), // se não tiver, cria um
-              name: leadParaAdicionar.name,
-              vehicleModel: leadParaAdicionar.vehiclemodel,
-              vehicleYearModel: leadParaAdicionar.vehicleyearmodel,
-              city: leadParaAdicionar.city,
-              phone: leadParaAdicionar.phone,
-              insurer: leadParaAdicionar.insurancetype || leadParaAdicionar.insuranceType || "",
-              Data: leadParaAdicionar.createdAt || new Date().toISOString(),
-              Responsavel: leadParaAdicionar.responsavel || "",
-              Status: "Fechado",
-              Seguradora: leadParaAdicionar.Seguradora || "",
-              PremioLiquido: leadParaAdicionar.premioLiquido || "",
-              Comissao: leadParaAdicionar.comissao || "",
-              Parcelamento: leadParaAdicionar.parcelamento || "",
-              id: leadParaAdicionar.id || null, // Manter o ID original do lead
-              usuario: leadParaAdicionar.usuario || "",
-              nome: leadParaAdicionar.nome || "",
-              email: leadParaAdicionar.email || "",
-              senha: leadParaAdicionar.senha || "",
-              status: leadParaAdicionar.status || "Ativo",
-              tipo: leadParaAdicionar.tipo || "Usuario",
-              "Ativo/Inativo": leadParaAdicionar["Ativo/Inativo"] || "Ativo",
-              confirmado: true
-            };
-            return [...prev, novoLeadFechado];
-          }
-          // Caso não encontre o lead (só por segurança)
-          console.warn("Lead não encontrado na lista principal para adicionar aos fechados.");
-          return prev;
+          // Se não existe, adiciona o lead atualizado
+          const novoLeadFechado = {
+            ID: updatedLead.id,
+            name: updatedLead.name,
+            vehicleModel: updatedLead.vehicleModel,
+            vehicleYearModel: updatedLead.vehicleYearModel,
+            city: updatedLead.city,
+            phone: updatedLead.phone,
+            insurer: updatedLead.insuranceType || updatedLead.insurer || "",
+            Data: updatedLead.createdAt,
+            Responsavel: updatedLead.responsavel || "",
+            Status: "Fechado",
+            Seguradora: updatedLead.insurer || "",
+            PremioLiquido: updatedLead.premioLiquido || 0,
+            Comissao: updatedLead.comissao || 0,
+            Parcelamento: updatedLead.parcelamento || "",
+            id: updatedLead.id,
+            usuarioId: updatedLead.usuarioId,
+            confirmado: true,
+            insurerConfirmed: updatedLead.insurerConfirmed,
+            editado: updatedLead.editado,
+          };
+          return [...prev, novoLeadFechado];
         }
       });
     }
+
+    // Envia a atualização para o Google Apps Script
+    try {
+      await fetch(GOOGLE_SHEETS_USERS + '?v=salvar_lead', { // Usando 'salvar_lead' para atualizar
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(updatedLead), // Envia o objeto lead completo atualizado
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('Requisição de atualização de status de lead enviada para o GAS.');
+    } catch (error) {
+      console.error('Erro ao enviar atualização de status de lead para o GAS:', error);
+    }
   };
 
-  // Função para atualizar a seguradora de um lead
+
   const atualizarSeguradoraLead = (id, seguradora) => {
     setLeads((prev) =>
       prev.map((lead) =>
@@ -339,7 +356,7 @@ const App = () => {
     if (responsavelId === null) {
       // Se for null, desatribui o responsável
       newResponsavelName = ''; // Define como vazio para enviar ao GAS
-      updatedLead = { ...leadToUpdate, responsavel: null }; // Atualiza o objeto para o GAS
+      updatedLead = { ...leadToUpdate, responsavel: null, editado: new Date().toISOString() }; // Atualiza o objeto e data de edição para o GAS
     } else {
       // Busca o usuário normalmente se responsavelId não for null
       let usuario = usuarios.find((u) => u.id === responsavelId);
@@ -349,7 +366,7 @@ const App = () => {
         return;
       }
       newResponsavelName = usuario.nome;
-      updatedLead = { ...leadToUpdate, responsavel: newResponsavelName }; // Atualiza o objeto para o GAS
+      updatedLead = { ...leadToUpdate, responsavel: newResponsavelName, editado: new Date().toISOString() }; // Atualiza o objeto e data de edição para o GAS
     }
 
     // Atualiza o estado local imediatamente
@@ -362,12 +379,10 @@ const App = () => {
     // Enviar a atualização para o Google Apps Script
     try {
       // Usando GOOGLE_SHEETS_USERS como base para a URL do script
-      await fetch(GOOGLE_SHEETS_USERS + '?v=transferir_lead', {
+      await fetch(GOOGLE_SHEETS_USERS + '?v=salvar_lead', { // Usando 'salvar_lead' para atualizar
         method: 'POST',
         mode: 'no-cors', // Importante para evitar problemas de CORS
-        body: JSON.stringify({
-          lead: updatedLead // Envia o objeto lead completo atualizado
-        }),
+        body: JSON.stringify(updatedLead), // Envia o objeto lead completo atualizado
         headers: {
           'Content-Type': 'application/json',
         },
