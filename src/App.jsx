@@ -488,13 +488,15 @@ const App = () => {
     const isAdmin = usuarioLogado?.tipo === 'Admin';
 
     return (
-        <div style={{ display: 'flex', height: '100vh', width: '100vw' }}> {/* Adicionado width: '100vw' */}
-            {/* Aqui, o contêiner da Sidebar recebe uma largura fixa */}
-            <div style={{ flexShrink: 0, width: '250px', backgroundColor: '#2d3748' }}> {/* Cor de fundo para depuração */}
-                <Sidebar isAdmin={isAdmin} nomeUsuario={usuarioLogado} />
+        <div style={{ display: 'flex', height: '100vh', width: '100vw' }}>
+            {/* O estilo inline 'backgroundColor: #2d3748' foi REMOVIDO daqui.
+                A largura (width) foi ajustada para 64 unidades do Tailwind (256px) para corresponder
+                com a classe 'w-64' usada dentro do Sidebar.jsx. */}
+            <div style={{ flexShrink: 0, width: '256px' }}> {/* 256px é o valor padrão para w-64 em Tailwind */}
+                <Sidebar isAdmin={isAdmin} usuarioLogado={usuarioLogado} /> {/* Passando usuarioLogado como prop */}
             </div>
 
-            <main style={{ flexGrow: 1, overflowY: 'auto' }}> {/* flexGrow para ocupar o restante, overflowY para rolagem */}
+            <main style={{ flexGrow: 1, overflowY: 'auto' }}>
                 <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route
