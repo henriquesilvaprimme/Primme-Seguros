@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'; // Adicionado useCallback
+import React, { useEffect, useState } from 'react';
 
 const Ranking = ({ usuarios }) => {
   const [carregando, setCarregando] = useState(true);
@@ -14,22 +14,9 @@ const Ranking = ({ usuarios }) => {
 
   const [filtroData, setFiltroData] = useState(dataInput);
 
-  // Nova URL do Google Apps Script para buscar leads
-  const GOOGLE_SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
-
-
   // Função para converter data no formato dd/mm/aaaa para yyyy-mm-dd
-  // Melhoria: Lidar com o caso de data já vir no formato yyyy-mm-dd do script
   const converterDataParaISO = (dataStr) => {
     if (!dataStr) return '';
-    // Se a data já for um objeto Date ou estiver no formato ISO (e.g., de new Date().toISOString())
-    if (dataStr instanceof Date) {
-        return dataStr.toISOString().slice(0, 10);
-    }
-    // Se a data vier como string "yyyy-mm-dd" ou "yyyy/mm/dd"
-    if (dataStr.includes('-') && dataStr.split('-').length === 3) {
-      return dataStr.slice(0, 10); // Retorna no formato yyyy-mm-dd
-    }
     if (dataStr.includes('/')) {
       const partes = dataStr.split('/');
       if (partes.length === 3) {
@@ -37,49 +24,29 @@ const Ranking = ({ usuarios }) => {
         return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
       }
     }
-    return dataStr.slice(0, 10); // Tenta pegar os 10 primeiros caracteres como yyyy-mm-dd
+    // Se já estiver em formato ISO ou outro, tentar retornar só o prefixo yyyy-mm
+    return dataStr.slice(0, 7);
   };
 
-
-  // Usar useCallback para memorizar a função e evitar recriação desnecessária
-  const buscarClientesFechados = useCallback(async () => {
+  const buscarClientesFechados = async () => {
     setCarregando(true);
     try {
-      // Adiciona a ação para o doGet no Apps Script
-      const params = new URLSearchParams();
-      params.append('action', 'getLeads'); // Certifique-se que seu Apps Script tem essa ação
-
-      const respostaLeads = await fetch(`${GOOGLE_SHEETS_API_URL}?${params.toString()}`);
-      
-      if (!respostaLeads.ok) {
-        throw new Error(`Erro HTTP! status: ${respostaLeads.status}`);
-      }
-      
+      const respostaLeads = await fetch(
+        'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec'
+      );
       const dados = await respostaLeads.json();
-      
-      // Mapeia para garantir que 'Data' e outros campos numéricos estejam corretos
-      const leadsFormatados = dados.map(lead => ({
-        ...lead,
-        // Garante que 'Data' seja tratada como string para o filtro de mês/ano
-        Data: String(lead.Data || ''),
-        PremioLiquido: Number(lead.PremioLiquido) || 0,
-        Comissao: Number(lead.Comissao) || 0,
-        Parcelamento: lead.Parcelamento ? String(lead.Parcelamento).replace('x', '') : '', // Armazenar apenas o número
-      }));
-
-      setLeads(leadsFormatados);
+      setLeads(dados);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setLeads([]);
-      alert('Erro ao carregar os dados de leads. Por favor, tente novamente.');
     } finally {
       setCarregando(false);
     }
-  }, [GOOGLE_SHEETS_API_URL]); // Depende apenas da URL da API
+  };
 
   useEffect(() => {
     buscarClientesFechados();
-  }, [buscarClientesFechados]); // Chama a função quando o componente é montado
+  }, []);
 
   if (!Array.isArray(usuarios) || !Array.isArray(dadosLeads)) {
     return <div style={{ padding: 20 }}>Erro: dados não carregados corretamente.</div>;
@@ -108,10 +75,9 @@ const Ranking = ({ usuarios }) => {
   };
 
   const formatarParcelamento = (valor) => {
-    // Agora 'valor' já deve ser um número ou string vazia da formatação em buscarClientesFechados
-    let num = typeof valor === 'string' ? parseInt(valor, 10) : Number(valor);
-    if (isNaN(num) || num < 1) return 'N/A'; // Alterado para 'N/A' para melhor visualização
-    if (num > 12) num = 12; // Limitar a 12x
+    let num = typeof valor === 'string' ? parseInt(valor.replace('x', ''), 10) : valor;
+    if (isNaN(num) || num < 1) return '';
+    if (num > 12) num = 12;
     return `${num}x`;
   };
 
@@ -121,12 +87,8 @@ const Ranking = ({ usuarios }) => {
       const responsavelOk = l.Responsavel === usuario.nome;
       const statusOk = l.Status === 'Fechado';
       const seguradoraOk = l.Seguradora && l.Seguradora.trim() !== '';
-      
-      const dataLeadISO = converterDataParaISO(l.Data); // Converte a data do lead para ISO yyyy-mm-dd
-      const filtroMesAno = filtroData.slice(0, 7); // Pega apenas yyyy-mm do filtro
-
-      const dataOk = dataLeadISO.startsWith(filtroMesAno); // Compara yyyy-mm
-
+      const dataISO = converterDataParaISO(l.Data);
+      const dataOk = !filtroData || dataISO.startsWith(filtroData);
       return responsavelOk && statusOk && seguradoraOk && dataOk;
     });
 
@@ -154,13 +116,17 @@ const Ranking = ({ usuarios }) => {
     const comissaoMedia =
       premioLiquido > 0 ? (somaPonderadaComissao / premioLiquido) * 100 : 0;
 
-    const leadsParcelamentoValidos = leadsUsuario.filter((l) => Number(l.Parcelamento) > 0);
+    const leadsParcelamento = leadsUsuario.filter((l) => l.Parcelamento);
     let parcelamentoMedio = 0;
-    if (leadsParcelamentoValidos.length > 0) {
-      const somaParcelamento = leadsParcelamentoValidos.reduce((acc, curr) => {
-        return acc + Number(curr.Parcelamento); // Já é número pela formatação inicial
+    if (leadsParcelamento.length > 0) {
+      const somaParcelamento = leadsParcelamento.reduce((acc, curr) => {
+        const val =
+          typeof curr.Parcelamento === 'string'
+            ? parseInt(curr.Parcelamento.replace('x', ''), 10)
+            : Number(curr.Parcelamento) || 0;
+        return acc + val;
       }, 0);
-      parcelamentoMedio = Math.round(somaParcelamento / leadsParcelamentoValidos.length);
+      parcelamentoMedio = Math.round(somaParcelamento / leadsParcelamento.length);
     }
 
     return {
@@ -177,7 +143,6 @@ const Ranking = ({ usuarios }) => {
   });
 
   const rankingOrdenado = usuariosComContagem.sort((a, b) => {
-    // Prioridade de ordenação: Vendas totais, depois por seguradora específica
     if (b.vendas !== a.vendas) return b.vendas - a.vendas;
     if (b.porto !== a.porto) return b.porto - a.porto;
     if (b.itau !== a.itau) return b.itau - a.itau;
@@ -192,12 +157,6 @@ const Ranking = ({ usuarios }) => {
 
   const aplicarFiltroData = () => {
     setFiltroData(dataInput);
-    // Ao aplicar o filtro, re-buscar os dados do Apps Script para garantir que o filtro
-    // seja aplicado diretamente na fonte de dados se o Apps Script suportar.
-    // Ou, se o filtro for apenas no front-end, a lógica de `leadsUsuario` já cuida disso.
-    // Para este caso, como o filtro é no front-end com base em `dadosLeads`, não precisamos re-buscar aqui,
-    // mas se o Apps Script fosse filtrar, este seria o local.
-    // Para este código, o filtro acontece após `dadosLeads` ser carregado, no `usuariosComContagem`.
   };
 
   return (
@@ -208,14 +167,7 @@ const Ranking = ({ usuarios }) => {
         <button
           title="Clique para atualizar os dados"
           onClick={() => {
-            buscarClientesFechados(); // Re-busca todos os leads e re-aplica o filtro de data localmente
-          }}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '1.5rem',
-            marginLeft: '10px',
+            buscarClientesFechados();
           }}
         >
           🔄
