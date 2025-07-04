@@ -21,9 +21,19 @@ const GOOGLE_SHEETS_SCRIPT_URL_GET_LEADS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=get
 const GOOGLE_SHEETS_SCRIPT_URL_USERS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=pegar_usuario`;
 const GOOGLE_SHEETS_SCRIPT_URL_LEADS_FECHADOS = `${GOOGLE_APPS_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`;
 
-// Ações POST usarão a URL base com um parâmetro 'action' no body ou na query.
-// Recomendo usar no body (JSON) para POST, como já está sendo feito.
+// Ações POST usarão a URL base com um parâmetro 'action' na query.
 const GOOGLE_SHEETS_SCRIPT_URL_ACTIONS = GOOGLE_APPS_SCRIPT_BASE_URL;
+
+// --- Função auxiliar para parsear datas de forma segura ---
+const parseDateSafely = (dateString) => {
+    if (dateString && typeof dateString === 'string' && dateString.trim() !== '') {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) { // Verifica se a data é válida
+            return date.toISOString();
+        }
+    }
+    return ''; // Retorna string vazia para datas inválidas ou ausentes
+};
 
 const App = () => {
     const navigate = useNavigate();
@@ -57,13 +67,14 @@ const App = () => {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_GET_LEADS);
             const data = await response.json();
 
-            // console.log("Dados de Leads Recebidos:", data); // Manter para depuração
+            console.log("Dados BRUTOS de Leads Recebidos:", data); // Log para depuração
 
             if (Array.isArray(data)) {
                 const sortedData = data.sort((a, b) => {
-                    const dateA = new Date(a.editado || a.data || 0);
-                    const dateB = new Date(b.editado || b.data || 0);
-                    return dateB - dateA; // decrescente (mais recente no topo)
+                    // Usar parseDateSafely para garantir datas válidas para a ordenação
+                    const dateA = new Date(parseDateSafely(a.editado || a.data || ''));
+                    const dateB = new Date(parseDateSafely(b.editado || b.data || ''));
+                    return dateB.getTime() - dateA.getTime(); // decrescente (mais recente no topo)
                 });
 
                 const formattedLeads = sortedData.map((item, index) => ({
@@ -84,22 +95,20 @@ const App = () => {
                     premioLiquido: item.premioliquido || item.PremioLiquido || '',
                     comissao: item.comissao || item.Comissao || '',
                     parcelamento: item.parcelamento || item.Parcelamento || '',
-                    Data: item.data || item.Data || new Date().toISOString(), // Use 'Data' se for a coluna no Sheets
+                    Data: parseDateSafely(item.data || item.Data), // Usar função segura para datas
                     Responsavel: item.responsavel || item.Responsavel || '', // Use 'Responsavel' se for a coluna no Sheets
-                    editado: item.editado || ''
+                    editado: parseDateSafely(item.editado) // Use função segura para datas
                 }));
 
-                // console.log("Leads Formatados:", formattedLeads); // Manter para depuração
+                console.log("Leads Formatados para Estado:", formattedLeads); // Log para depuração
 
-                // Evita re-renderizar desnecessariamente se o lead selecionado não mudou.
-                // Mas, se o lead selecionado foi atualizado no Sheet, queremos que o componente o reflita.
                 if (!leadSelecionado) {
                     setLeads(formattedLeads);
                 } else {
                     const updatedSelectedLead = formattedLeads.find(l => l.id === leadSelecionado.id);
                     if (updatedSelectedLead) {
-                        setLeads(formattedLeads); // Atualiza a lista completa
-                        setLeadSelecionado(updatedSelectedLead); // Garante que o selecionado reflita as mudanças
+                        setLeads(formattedLeads);
+                        setLeadSelecionado(updatedSelectedLead);
                     } else {
                         setLeads(formattedLeads);
                     }
@@ -111,14 +120,14 @@ const App = () => {
             console.error('Erro ao buscar leads do Google Sheets:', error);
             setLeads([]);
         }
-    }, [leadSelecionado]); // Depende de leadSelecionado para saber se deve atualizar o estado
+    }, [leadSelecionado]);
 
     // Função para buscar leads fechados
     const fetchLeadsFechadosFromSheet = useCallback(async () => {
         try {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_LEADS_FECHADOS);
             const data = await response.json();
-            // console.log("Leads Fechados Recebidos:", data); // Manter para depuração
+            console.log("Dados BRUTOS de Leads Fechados Recebidos:", data); // Log para depuração
 
             if (Array.isArray(data)) {
                 const formattedFechados = data.map(item => ({
@@ -138,10 +147,11 @@ const App = () => {
                     PremioLiquido: item.PremioLiquido || item.premioliquido || '', // Use 'PremioLiquido' com 'P' e 'L' maiúsculos
                     Comissao: item.Comissao || item.comissao || '', // Use 'Comissao' com 'C' maiúsculo
                     Parcelamento: item.Parcelamento || item.parcelamento || '', // Use 'Parcelamento' com 'P' maiúsculo
-                    Data: item.Data || item.data || '', // Use 'Data' com 'D' maiúsculo
+                    Data: parseDateSafely(item.Data || item.data), // Use função segura para datas
                     Responsavel: item.Responsavel || item.responsavel || '', // Use 'Responsavel' com 'R' maiúsculo
-                    editado: item.editado || ''
+                    editado: parseDateSafely(item.editado) // Use função segura para datas
                 }));
+                console.log("Leads Fechados Formatados para Estado:", formattedFechados); // Log para depuração
                 setLeadsFechados(formattedFechados);
             } else {
                 setLeadsFechados([]);
@@ -157,7 +167,7 @@ const App = () => {
         try {
             const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL_USERS);
             const data = await response.json();
-            // console.log("Usuários Recebidos:", data); // Manter para depuração
+            console.log("Dados BRUTOS de Usuários Recebidos:", data); // Log para depuração
 
             if (Array.isArray(data)) {
                 const formattedUsuarios = data.map((item) => ({
@@ -170,6 +180,7 @@ const App = () => {
                     status: item.status || 'Ativo',
                     tipo: item.tipo || 'Usuario',
                 }));
+                console.log("Usuários Formatados para Estado:", formattedUsuarios); // Log para depuração
                 setUsuarios(formattedUsuarios);
             } else {
                 setUsuarios([]);
@@ -185,7 +196,7 @@ const App = () => {
     // Este useEffect é CRÍTICO: carrega os usuários ANTES de tudo para permitir o login.
     useEffect(() => {
         fetchUsuariosFromSheet();
-        const interval = setInterval(fetchUsuariosFromSheet, 30000); // 30 segundos (reduzido para depuração)
+        const interval = setInterval(fetchUsuariosFromSheet, 30000); // 30 segundos para depuração
         return () => clearInterval(interval);
     }, [fetchUsuariosFromSheet]);
 
@@ -194,7 +205,7 @@ const App = () => {
     useEffect(() => {
         if (isAuthenticated || usuarios.length > 0) {
             fetchLeadsFromSheet();
-            const interval = setInterval(fetchLeadsFromSheet, 60000);
+            const interval = setInterval(fetchLeadsFromSheet, 60000); // 1 minuto
             return () => clearInterval(interval);
         }
     }, [fetchLeadsFromSheet, isAuthenticated, usuarios.length]);
@@ -202,7 +213,7 @@ const App = () => {
     useEffect(() => {
         if (isAuthenticated || usuarios.length > 0) {
             fetchLeadsFechadosFromSheet();
-            const interval = setInterval(fetchLeadsFechadosFromSheet, 60000);
+            const interval = setInterval(fetchLeadsFechadosFromSheet, 60000); // 1 minuto
             return () => clearInterval(interval);
         }
     }, [fetchLeadsFechadosFromSheet, isAuthenticated, usuarios.length]);
@@ -251,9 +262,9 @@ const App = () => {
             premioLiquido: leadToUpdate.premioLiquido,
             comissao: leadToUpdate.comissao,
             parcelamento: leadToUpdate.parcelamento,
-            Data: leadToUpdate.Data, // -> Coluna 'Data' no Sheets
+            Data: leadToUpdate.Data, // -> Coluna 'Data' no Sheets (já formatada por parseDateSafely na leitura)
             Responsavel: leadToUpdate.Responsavel, // -> Coluna 'Responsavel' no Sheets
-            editado: new Date().toLocaleString()
+            editado: new Date().toLocaleString() // Data de edição atual
         };
 
         console.log("Dados enviados para salvar_lead (status):", updatedLeadData);
@@ -295,7 +306,7 @@ const App = () => {
                         city: leadToUpdate.city,
                         phone: leadToUpdate.phone,
                         Seguradora: leadToUpdate.insurer || leadToUpdate.insuranceType || '', // Use a chave da coluna no Sheets
-                        Data: leadToUpdate.Data || new Date().toISOString(), // Use a chave da coluna no Sheets
+                        Data: leadToUpdate.Data || parseDateSafely(new Date().toISOString()), // Use a chave da coluna no Sheets
                         Responsavel: leadToUpdate.Responsavel || '', // Use a chave da coluna no Sheets
                         Status: "Fechado",
                         PremioLiquido: leadToUpdate.premioLiquido || '',
