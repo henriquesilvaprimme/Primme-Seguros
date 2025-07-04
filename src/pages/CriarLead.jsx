@@ -1,124 +1,201 @@
-// CriarLead.jsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+// Use a mesma URL base que definimos no App.jsx para criação de leads.
+// Certifique-se de que esta URL aponte para o seu Apps Script e que ele saiba como
+// lidar com a 'action=criar_lead' no método doPost.
+const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead';
 
 const CriarLead = ({ adicionarLead }) => {
-  const [nomeLead, setNomeLead] = useState('');
-  const [emailLead, setEmailLead] = useState('');
-  const [telefoneLead, setTelefoneLead] = useState('');
-  const [origemLead, setOrigemLead] = useState(''); // Ex: 'Site', 'Telefone', 'Indicação'
+  const [formData, setFormData] = useState({
+    name: '',
+    vehicleModel: '',
+    vehicleYearModel: '',
+    city: '',
+    phone: '',
+    insuranceType: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const navigate = useNavigate();
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleCriar = async () => {
-    if (!nomeLead || !emailLead || !telefoneLead || !origemLead) {
-      alert('Por favor, preencha todos os campos do lead.');
-      return;
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
 
-    const novoLead = {
-      id: Date.now(), // Um ID único para o lead
-      nome: nomeLead,
-      email: emailLead,
-      telefone: telefoneLead,
-      origem: origemLead,
-      dataCriacao: new Date().toLocaleString(), // Data e hora de criação
-      status: 'Novo', // Status inicial do lead
+    // Gera um ID simples baseado no timestamp atual (para simular um ID único)
+    const newId = new Date().getTime();
+    // Pega a data e hora atual no formato ISO (pode ser ajustado conforme a necessidade do Sheets)
+    const currentDate = new Date().toISOString();
+
+    // Cria o objeto do novo lead com as colunas especificadas
+    const newLead = {
+      ID: newId,
+      name: formData.name,
+      vehicleModel: formData.vehicleModel,
+      vehicleYearModel: formData.vehicleYearModel,
+      city: formData.city,
+      phone: formData.phone,
+      insuranceType: formData.insuranceType,
+      data: currentDate, // Coluna 'data'
+      // Adicione outras colunas com valores padrão se necessário,
+      // como 'status': 'Novo', 'responsavel': 'Aguardando atribuição', etc.
+      status: 'Novo', // Exemplo de valor padrão para 'status'
+      confirmado: false, // Exemplo de valor padrão para 'confirmado'
+      insurer: '',
+      insurerConfirmed: false,
+      usuarioId: null,
+      premioLiquido: '',
+      comissao: '',
+      parcelamento: '',
+      responsavel: '',
+      editado: currentDate // Data de criação como data de edição inicial
     };
 
     try {
-      await enviarLeadParaSheets(novoLead); // Chama a função para enviar para o Sheets
-      adicionarLead(novoLead); // Adiciona o lead ao estado local da aplicação (se houver)
-      alert('Lead criado e enviado com sucesso!');
-      navigate('/leads'); // Redireciona para a página de leads (ajuste conforme sua rota)
-    } catch (error) {
-      console.error('Erro ao criar ou enviar lead:', error);
-      alert('Ocorreu um erro ao criar o lead. Por favor, tente novamente.');
-    }
-  };
-
-  const enviarLeadParaSheets = async (lead) => {
-    // ATENÇÃO: Substitua ESTA URL pela URL DO SEU GOOGLE APPS SCRIPT DEPLOYADO
-    // Este é o mesmo conceito da URL do criar_usuario, mas para leads.
-    const urlDoAppsScript = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec'; 
-
-    try {
-      const response = await fetch(urlDoAppsScript, {
+      // Faz a chamada para o Apps Script
+      const response = await fetch(GOOGLE_SHEETS_LEAD_CREATION_URL, {
         method: 'POST',
-        mode: 'no-cors', // Importante para evitar problemas de CORS com o Apps Script
-        body: JSON.stringify(lead),
+        mode: 'no-cors', // Necessário para evitar erros CORS com Apps Script
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(newLead), // Envia o objeto do lead
       });
 
-      // No modo 'no-cors', você não consegue ler a resposta diretamente.
-      // O sucesso é inferido pela ausência de erros na requisição.
-      // console.log('Requisição enviada para o Apps Script.');
+      // Como mode: 'no-cors' não permite ler a resposta, assumimos sucesso aqui.
+      // Você pode implementar um feedback mais robusto usando um proxy ou WebHook.
+      setMessage('Lead criado com sucesso! Ele aparecerá em breve na lista.');
+      setFormData({
+        name: '',
+        vehicleModel: '',
+        vehicleYearModel: '',
+        city: '',
+        phone: '',
+        insuranceType: '',
+      });
+      // Adiciona o novo lead à lista no estado global do App.jsx
+      adicionarLead(newLead);
 
     } catch (error) {
-      console.error('Erro ao enviar lead para o Google Sheets via Apps Script:', error);
-      throw error; // Propaga o erro para ser tratado por handleCriar
+      console.error('Erro ao enviar lead:', error);
+      setMessage('Erro ao criar lead. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow-md space-y-6">
-      <h2 className="text-3xl font-bold text-green-700 mb-4">Criar Novo Lead</h2>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Criar Novo Lead</h1>
+      <div className="bg-white p-8 rounded-lg shadow-md max-w-lg mx-auto">
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">
+              Nome do Cliente:
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
 
-      <div>
-        <label className="block text-gray-700">Nome do Lead</label>
-        <input
-          type="text"
-          value={nomeLead}
-          onChange={(e) => setNomeLead(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-        />
-      </div>
+          <div className="mb-4">
+            <label htmlFor="vehicleModel" className="block text-gray-700 text-sm font-bold mb-2">
+              Modelo do Veículo:
+            </label>
+            <input
+              type="text"
+              id="vehicleModel"
+              name="vehicleModel"
+              value={formData.vehicleModel}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
 
-      <div>
-        <label className="block text-gray-700">Email do Lead</label>
-        <input
-          type="email"
-          value={emailLead}
-          onChange={(e) => setEmailLead(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-        />
-      </div>
+          <div className="mb-4">
+            <label htmlFor="vehicleYearModel" className="block text-gray-700 text-sm font-bold mb-2">
+              Ano/Modelo do Veículo:
+            </label>
+            <input
+              type="text"
+              id="vehicleYearModel"
+              name="vehicleYearModel"
+              value={formData.vehicleYearModel}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
 
-      <div>
-        <label className="block text-gray-700">Telefone do Lead</label>
-        <input
-          type="text"
-          value={telefoneLead}
-          onChange={(e) => setTelefoneLead(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-        />
-      </div>
+          <div className="mb-4">
+            <label htmlFor="city" className="block text-gray-700 text-sm font-bold mb-2">
+              Cidade:
+            </label>
+            <input
+              type="text"
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
 
-      <div>
-        <label className="block text-gray-700">Origem do Lead</label>
-        <select
-          value={origemLead}
-          onChange={(e) => setOrigemLead(e.target.value)}
-          className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-        >
-          <option value="">Selecione a origem</option>
-          <option value="Site">Site</option>
-          <option value="Telefone">Telefone</option>
-          <option value="Indicacao">Indicação</option>
-          <option value="Redes Sociais">Redes Sociais</option>
-          <option value="Outro">Outro</option>
-        </select>
-      </div>
+          <div className="mb-4">
+            <label htmlFor="phone" className="block text-gray-700 text-sm font-bold mb-2">
+              Telefone:
+            </label>
+            <input
+              type="text"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="(XX) XXXXX-XXXX"
+              required
+            />
+          </div>
 
-      <div className="flex justify-end">
-        <button
-          onClick={handleCriar}
-          className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
-        >
-          Criar Lead
-        </button>
+          <div className="mb-6">
+            <label htmlFor="insuranceType" className="block text-gray-700 text-sm font-bold mb-2">
+              Tipo de Seguro:
+            </label>
+            <input
+              type="text"
+              id="insuranceType"
+              name="insuranceType"
+              value={formData.insuranceType}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            disabled={loading}
+          >
+            {loading ? 'Criando...' : 'Criar Lead'}
+          </button>
+        </form>
+        {message && (
+          <p className="mt-4 text-center text-sm font-semibold text-gray-700">{message}</p>
+        )}
       </div>
     </div>
   );
