@@ -72,7 +72,7 @@ const CriarLead = ({ adicionarLead }) => {
         vehicleYearModel: '',
         city: '',
         phone: '',
-        insuranceType: 'Novo', // Reseta para 'Novo' após o envio
+        insuranceType: ' ', // Reseta para ' ' após o envio
       });
       // Adiciona o novo lead à lista no estado global do App.jsx
       adicionarLead(newLead);
