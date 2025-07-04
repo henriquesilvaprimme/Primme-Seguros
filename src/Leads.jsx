@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import Lead from './components/Lead';
 
-// A URL GOOGLE_SHEETS_SCRIPT_URL não é usada diretamente neste componente para POSTs,
-// mas é mantida aqui se for usada para GETs ou outras finalidades.
-// As chamadas POST de atualização de leads são feitas via props (transferirLead) que vêm do App.jsx
+// Nova URL do Google Apps Script
 const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
 
 const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado, fetchLeadsFromSheet }) => {
   const [selecionados, setSelecionados] = useState({}); // { [leadId]: userId }
   const [paginaAtual, setPaginaAtual] = useState(1);
+
+  // Estado para controle de atualização
+  const [atualizando, setAtualizando] = useState(false);
 
   // Estados para filtro por data (mes e ano) - INICIAM LIMPOS
   const [dataInput, setDataInput] = useState('');
@@ -18,24 +19,15 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
   const [nomeInput, setNomeInput] = useState('');
   const [filtroNome, setFiltroNome] = useState('');
 
-  // A função buscarLeadsAtualizados aqui não é mais estritamente necessária para a atualização instantânea do responsável,
-  // pois a prop 'leads' já é atualizada pelo App.jsx.
-  // No entanto, pode ser útil para o botão de refresh manual.
-  const buscarLeadsAtualizados = async () => {
+  // Função para atualizar leads com mensagem de carregamento
+  const handleAtualizar = async () => {
+    setAtualizando(true);
     try {
-      // Esta URL pode precisar ser ajustada para a URL de GET de leads do seu App.jsx
-      const response = await fetch(GOOGLE_SHEETS_SCRIPT_URL + '?v=getLeads'); // Adicionado ?v=getLeads
-      if (response.ok) {
-        const dadosLeads = await response.json();
-        // Aqui você precisaria de uma função passada via prop para atualizar o estado 'leads' no App.jsx
-        // Por enquanto, o fetchLeadsFromSheet já faz isso.
-        console.log("Leads atualizados manualmente:", dadosLeads);
-      } else {
-        console.error('Erro ao buscar leads:', response.statusText);
-      }
+      await fetchLeadsFromSheet();
     } catch (error) {
-      console.error('Erro ao buscar leads:', error);
+      console.error('Erro ao atualizar leads:', error);
     }
+    setAtualizando(false);
   };
 
   const leadsPorPagina = 10;
@@ -110,7 +102,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
   const handleSelect = (leadId, userId) => {
     setSelecionados((prev) => ({
       ...prev,
-      [leadId]: userId, // userId já é string se vier do select, mas o App.jsx vai lidar com isso
+      [leadId]: Number(userId),
     }));
   };
 
@@ -121,28 +113,27 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
       return;
     }
 
-    // Chama a função transferirLead passada via prop do App.jsx
-    // Esta função já atualiza o estado 'leads' no App.jsx e envia para o GAS.
+    // Chama a função transferirLead passada via props, que lida com a API e atualização do estado global
     transferirLead(leadId, userId);
 
-    // Limpa a seleção após o envio (opcional, mas boa prática)
+    // Opcional: Limpar a seleção após o envio
     setSelecionados((prev) => {
-      const newSelecionados = { ...prev };
-      delete newSelecionados[leadId];
-      return newSelecionados;
+      const newState = { ...prev };
+      delete newState[leadId];
+      return newState;
     });
   };
 
-  // A função enviarLeadAtualizado foi removida pois a lógica de envio para o GAS
-  // já é tratada pela função transferirLead em App.jsx.
-  // const enviarLeadAtualizado = async (lead) => { ... };
+  // A função 'enviarLeadAtualizado' foi removida daqui, pois a lógica está agora em 'transferirLead' no App.jsx
 
   const handleAlterar = (leadId) => {
+    // Limpa a seleção localmente para permitir uma nova escolha
     setSelecionados((prev) => ({
       ...prev,
       [leadId]: '',
     }));
-    transferirLead(leadId, null); // Envia null para desatribuir o responsável
+    // Chama a função transferirLead com null para desatribuir o lead
+    transferirLead(leadId, null);
   };
 
   const inicio = (paginaCorrigida - 1) * leadsPorPagina;
@@ -179,13 +170,15 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <h1 style={{ margin: 0 }}>Leads</h1>
 
-          <button title='Clique para atualizar os dados'
-            onClick={() => {
-              fetchLeadsFromSheet(); // Chama a função do App.jsx para rebuscar leads
-            }}
-          >
+          <button title='Clique para atualizar os dados' onClick={handleAtualizar}>
             🔄
           </button>
+
+          {atualizando && (
+            <span style={{ marginLeft: '10px', fontWeight: 'bold' }}>
+              Atualizando Página...
+            </span>
+          )}
         </div>
 
         {/* Filtro nome - centralizado */}
@@ -271,8 +264,7 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
       ) : (
         <>
           {leadsPagina.map((lead) => {
-            // Encontra o usuário pelo nome do responsável no lead
-            const responsavelUsuario = usuarios.find((u) => u.nome === lead.responsavel);
+            const responsavel = usuarios.find((u) => u.nome === lead.responsavel);
 
             return (
               <div
@@ -291,10 +283,10 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
                   disabledConfirm={!lead.responsavel}
                 />
 
-                {lead.responsavel && responsavelUsuario ? ( // Usa responsavelUsuario para verificar e exibir
+                {lead.responsavel && responsavel ? (
                   <div style={{ marginTop: '10px' }}>
                     <p style={{ color: '#28a745' }}>
-                      Transferido para <strong>{responsavelUsuario.nome}</strong>
+                      Transferido para <strong>{responsavel.nome}</strong>
                     </p>
                     {isAdmin && (
                       <button
@@ -358,63 +350,4 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
                 <div
                   style={{
                     position: 'absolute',
-                    bottom: '10px',
-                    right: '15px',
-                    fontSize: '12px',
-                    color: '#888',
-                    fontStyle: 'italic',
-                  }}
-                  title={`Criado em: ${formatarData(lead.createdAt)}`}
-                >
-                  {formatarData(lead.createdAt)}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Paginação */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '15px',
-              marginTop: '20px',
-            }}
-          >
-            <button
-              onClick={handlePaginaAnterior}
-              disabled={paginaCorrigida <= 1}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: '1px solid #ccc',
-                cursor: paginaCorrigida <= 1 ? 'not-allowed' : 'pointer',
-                backgroundColor: paginaCorrigida <= 1 ? '#f0f0f0' : '#fff',
-              }}
-            >
-              Anterior
-            </button>
-            <span style={{ alignSelf: 'center' }}>
-              Página {paginaCorrigida} de {totalPaginas}
-            </span>
-            <button
-              onClick={handlePaginaProxima}
-              disabled={paginaCorrigida >= totalPaginas}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: '1px solid #ccc',
-                cursor: paginaCorrigida >= totalPaginas ? 'not-allowed' : 'pointer',
-                backgroundColor: paginaCorrigida >= totalPaginas ? '#f0f0f0' : '#fff',
-              }}
-            >
-              Próxima
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-
-export default Leads;
+                    bottom: '
