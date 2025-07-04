@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import Lead from './components/Lead';
 
-// Nova URL do Google Apps Script
-const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
+const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu';
 
-const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado, fetchLeadsFromSheet }) => {
+const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado, fetchLeadsFromSheet  }) => {
   const [selecionados, setSelecionados] = useState({}); // { [leadId]: userId }
   const [paginaAtual, setPaginaAtual] = useState(1);
 
@@ -113,26 +112,34 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
       return;
     }
 
-    // Chama a função transferirLead passada via props, que lida com a API e atualização do estado global
     transferirLead(leadId, userId);
-
-    // Opcional: Limpar a seleção após o envio
-    setSelecionados((prev) => {
-      const newState = { ...prev };
-      delete newState[leadId];
-      return newState;
-    });
+  
+    const lead = leads.find((l) => l.id === leadId);
+    const leadAtualizado = { ...lead, usuarioId: userId };
+  
+    enviarLeadAtualizado(leadAtualizado);
   };
 
-  // A função 'enviarLeadAtualizado' foi removida daqui, pois a lógica está agora em 'transferirLead' no App.jsx
+  const enviarLeadAtualizado = async (lead) => {
+    try {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=alterar_atribuido', {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(lead),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao enviar lead:', error);
+    }
+  };
 
   const handleAlterar = (leadId) => {
-    // Limpa a seleção localmente para permitir uma nova escolha
     setSelecionados((prev) => ({
       ...prev,
       [leadId]: '',
     }));
-    // Chama a função transferirLead com null para desatribuir o lead
     transferirLead(leadId, null);
   };
 
@@ -350,4 +357,63 @@ const Leads = ({ leads, usuarios, onUpdateStatus, transferirLead, usuarioLogado,
                 <div
                   style={{
                     position: 'absolute',
-                    bottom: '
+                    bottom: '10px',
+                    right: '15px',
+                    fontSize: '12px',
+                    color: '#888',
+                    fontStyle: 'italic',
+                  }}
+                  title={`Criado em: ${formatarData(lead.createdAt)}`}
+                >
+                  {formatarData(lead.createdAt)}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Paginação */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '15px',
+              marginTop: '20px',
+            }}
+          >
+            <button
+              onClick={handlePaginaAnterior}
+              disabled={paginaCorrigida <= 1}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: '1px solid #ccc',
+                cursor: paginaCorrigida <= 1 ? 'not-allowed' : 'pointer',
+                backgroundColor: paginaCorrigida <= 1 ? '#f0f0f0' : '#fff',
+              }}
+            >
+              Anterior
+            </button>
+            <span style={{ alignSelf: 'center' }}>
+              Página {paginaCorrigida} de {totalPaginas}
+            </span>
+            <button
+              onClick={handlePaginaProxima}
+              disabled={paginaCorrigida >= totalPaginas}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: '1px solid #ccc',
+                cursor: paginaCorrigida >= totalPaginas ? 'not-allowed' : 'pointer',
+                backgroundColor: paginaCorrigida >= totalPaginas ? '#f0f0f0' : '#fff',
+              }}
+            >
+              Próxima
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default Leads;
