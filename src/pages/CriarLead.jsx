@@ -65,7 +65,7 @@ const CriarLead = ({ adicionarLead }) => {
         body: JSON.stringify(newLead), // Envia o objeto do lead
       });
 
-      setMessage('Lead criado com sucesso! Ele aparecerá em breve na lista.');
+      setMessage('✅ Lead criado com sucesso!');
       setFormData({
         name: '',
         vehicleModel: '',
@@ -178,6 +178,7 @@ const CriarLead = ({ adicionarLead }) => {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             >
+              <option value=" "> </option>
               <option value="Novo">Novo</option>
               <option value="Renovação">Renovação</option>
               <option value="Indicação">Indicação</option>
