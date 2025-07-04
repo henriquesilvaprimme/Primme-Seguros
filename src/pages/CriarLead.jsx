@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 // Use a mesma URL base que definimos no App.jsx para criação de leads.
 // Certifique-se de que esta URL aponte para o seu Apps Script e que ele saiba como
 // lidar com a 'action=criar_lead' no método doPost.
-const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead';
+const GOOGLE_SHEETS_LEAD_CREATION_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?action=criar_lead'; // Mantenha sua URL real aqui
 
 const CriarLead = ({ adicionarLead }) => {
   const [formData, setFormData] = useState({
@@ -12,7 +12,7 @@ const CriarLead = ({ adicionarLead }) => {
     vehicleYearModel: '',
     city: '',
     phone: '',
-    insuranceType: '',
+    insuranceType: 'Novo', // Definido como 'Novo' por padrão
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -40,12 +40,10 @@ const CriarLead = ({ adicionarLead }) => {
       vehicleYearModel: formData.vehicleYearModel,
       city: formData.city,
       phone: formData.phone,
-      insuranceType: formData.insuranceType,
+      insuranceType: formData.insuranceType, // Agora virá do select
       data: currentDate, // Coluna 'data'
-      // Adicione outras colunas com valores padrão se necessário,
-      // como 'status': 'Novo', 'responsavel': 'Aguardando atribuição', etc.
-      status: 'Novo', // Exemplo de valor padrão para 'status'
-      confirmado: false, // Exemplo de valor padrão para 'confirmado'
+      status: 'Novo',
+      confirmado: false,
       insurer: '',
       insurerConfirmed: false,
       usuarioId: null,
@@ -67,8 +65,6 @@ const CriarLead = ({ adicionarLead }) => {
         body: JSON.stringify(newLead), // Envia o objeto do lead
       });
 
-      // Como mode: 'no-cors' não permite ler a resposta, assumimos sucesso aqui.
-      // Você pode implementar um feedback mais robusto usando um proxy ou WebHook.
       setMessage('Lead criado com sucesso! Ele aparecerá em breve na lista.');
       setFormData({
         name: '',
@@ -76,7 +72,7 @@ const CriarLead = ({ adicionarLead }) => {
         vehicleYearModel: '',
         city: '',
         phone: '',
-        insuranceType: '',
+        insuranceType: 'Novo', // Reseta para 'Novo' após o envio
       });
       // Adiciona o novo lead à lista no estado global do App.jsx
       adicionarLead(newLead);
@@ -174,15 +170,18 @@ const CriarLead = ({ adicionarLead }) => {
             <label htmlFor="insuranceType" className="block text-gray-700 text-sm font-bold mb-2">
               Tipo de Seguro:
             </label>
-            <input
-              type="text"
+            <select
               id="insuranceType"
               name="insuranceType"
               value={formData.insuranceType}
               onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
-            />
+            >
+              <option value="Novo">Novo</option>
+              <option value="Renovação">Renovação</option>
+              <option value="Indicação">Indicação</option>
+            </select>
           </div>
 
           <button
