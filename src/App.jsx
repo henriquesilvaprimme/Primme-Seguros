@@ -16,10 +16,9 @@ import CriarLead from './pages/CriarLead';
 // URL base da sua nova implantação do Apps Script
 const GOOGLE_SCRIPT_BASE_URL = 'https://script.google.com/macros/s/AKfycby8vujvd5ybEpkaZ0kwZecAWOdaL0XJR84oKJBAIR9dVYeTCv7iSdTdHQWBb7YCp349/exec';
 
-// URLs específicas usando a base (para GET, ainda usam 'v' na URL)
-const GOOGLE_SHEETS_LEADS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=getLeads`; // Para buscar leads
+// URLs específicas usando a base (para GET)
+const GOOGLE_SHEETS_LEADS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=getLeads`; // Para buscar todos os leads (ativos, fechados, perdidos)
 const GOOGLE_SHEETS_USERS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_usuario`; // Para buscar usuários
-// REMOVIDO: const GOOGLE_SHEETS_LEADS_FECHADOS_API = `${GOOGLE_SCRIPT_BASE_URL}?v=pegar_clientes_fechados`; // Esta URL não será mais necessária se 'fetchLeadsFromSheet' buscar todos os leads.
 
 // URL para ações POST (criar/salvar/transferir/alterar), usando a URL base.
 // A ação será passada no corpo do JSON.
@@ -34,9 +33,8 @@ const App = () => {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
 
-  // O estado 'leads' será a fonte de verdade para TODOS os leads
+  // 'leads' é a única fonte de verdade para todos os leads (ativos, fechados, perdidos)
   const [leads, setLeads] = useState([]);
-  // 'leadsFechados' não é mais um estado separado, será filtrado de 'leads' onde for necessário
   const [usuarios, setUsuarios] = useState([]);
   const [leadSelecionado, setLeadSelecionado] = useState(null);
 
@@ -46,7 +44,7 @@ const App = () => {
     img.onload = () => setBackgroundLoaded(true);
   }, []);
 
-  // Use useCallback para memorizar as funções de fetch e evitar loops infinitos em useEffect
+  // Função para buscar leads do Google Sheet
   const fetchLeadsFromSheet = useCallback(async () => {
     try {
       console.log("Fetching leads from:", GOOGLE_SHEETS_LEADS_API);
@@ -61,6 +59,7 @@ const App = () => {
       console.log("Dados de Leads Recebidos:", data);
 
       if (Array.isArray(data)) {
+        // Ordena os dados pela data de edição ou criação, do mais recente para o mais antigo
         const sortedData = data.sort((a, b) => {
           const dateA = new Date(a.editado || a.data);
           const dateB = new Date(b.editado || b.data);
@@ -68,37 +67,41 @@ const App = () => {
         });
 
         const formattedLeads = sortedData.map((item, index) => ({
-          id: item.id ? Number(item.id) : index + 1,
+          // Padroniza nomes das propriedades para serem consistentes no frontend
+          id: item.id ? String(item.id) : String(index + 1), // ID como string para consistência
           name: item.name || item.Name || '',
           vehicleModel: item.vehiclemodel || item.vehicleModel || '',
           vehicleYearModel: item.vehicleyearmodel || item.vehicleYearModel || '',
           city: item.city || '',
-          phone: item.phone || item.Telefone || '',
+          phone: item.phone ? String(item.phone) : (item.Telefone ? String(item.Telefone) : ''), // Garante que telefone seja string
           insuranceType: item.insurancetype || item.insuranceType || '',
           status: item.status || 'Selecione o status',
           confirmado: item.confirmado === 'true' || item.confirmado === true,
           insurer: item.insurer || '',
           insurerConfirmed: item.insurerconfirmed === 'true' || item.insurerconfirmed === true,
-          usuarioId: item.usuarioid ? Number(item.usuarioid) : null,
+          usuarioId: item.usuarioid ? String(item.usuarioid) : null, // ID de usuário como string
           premioLiquido: item.premioliquido || '',
           comissao: item.comissao || '',
           parcelamento: item.parcelamento || '',
-          createdAt: item.data || new Date().toISOString(),
+          createdAt: item.data || new Date().toISOString(), // Data de criação
           responsavel: item.responsavel || '',
-          editado: item.editado || '',
-          // Mapeamento dos campos do Google Sheet para o componente
-          // Estes devem coincidir com os nomes de coluna do seu Google Sheet para leads fechados
-          ID: item.id ? Number(item.id) : index + 1, // 'ID' é usado no LeadsFechados
-          Data: item.data || new Date().toISOString(), // 'Data' é usado no LeadsFechados
-          Seguradora: item.seguradora || '', // 'Seguradora' é usado no LeadsFechados
-          PremioLiquido: item.premioliquido || '', // 'PremioLiquido' é usado no LeadsFechados
-          Comissao: item.comissao || '', // 'Comissao' é usado no LeadsFechados
-          Parcelamento: item.parcelamento || '', // 'Parcelamento' é usado no LeadsFechados
-          Responsavel: item.responsavel || '', // 'Responsavel' é usado no LeadsFechados
+          editado: item.editado || '', // Data da última edição
+
+          // Mapeamento explícito para as chaves esperadas pelos componentes como LeadsFechados
+          // Garante que LeadsFechados encontre as propriedades esperadas, independentemente da caixa ou nome original do sheet
+          ID: item.id ? String(item.id) : String(index + 1),
+          Data: item.data || new Date().toISOString(),
+          Seguradora: item.insurer || item.Seguradora || '', // 'insurer' ou 'Seguradora'
+          PremioLiquido: item.premioliquido || item.PremioLiquido || '',
+          Comissao: item.comissao || item.Comissao || '',
+          Parcelamento: item.parcelamento || item.Parcelamento || '',
+          Responsavel: item.responsavel || item.Responsavel || '',
+          Telefone: item.phone ? String(item.phone) : (item.Telefone ? String(item.Telefone) : ''), // Telefone também para LeadsFechados
+          Nome: item.name || item.Name || '', // Nome também para LeadsFechados
         }));
 
-        console.log("Leads Formatados:", formattedLeads);
-        setLeads(formattedLeads); // Sempre atualiza o estado principal
+        console.log("Leads Formatados para estado global:", formattedLeads);
+        setLeads(formattedLeads); // Atualiza o estado principal com todos os leads
       } else {
         setLeads([]);
         console.warn("Dados de leads não são um array:", data);
@@ -107,12 +110,9 @@ const App = () => {
       console.error('Erro ao buscar leads do Google Sheets:', error);
       setLeads([]);
     }
-  }, []); // Dependências vazias, pois a URL é constante
+  }, []); // Dependências vazias, pois a URL é constante e não há dependências de estado
 
-  // REMOVIDO: fetchLeadsFechadosFromSheet não é mais um fetch separado,
-  // pois todos os leads vêm de fetchLeadsFromSheet
-  // const fetchLeadsFechadosFromSheet = useCallback(async () => { ... });
-
+  // Função para buscar usuários do Google Sheet
   const fetchUsuariosFromSheet = useCallback(async () => {
     try {
       console.log("Tentando buscar usuários de:", GOOGLE_SHEETS_USERS_API);
@@ -151,30 +151,23 @@ const App = () => {
   // Efeitos para buscar dados periodicamente
   useEffect(() => {
     fetchLeadsFromSheet();
-    const interval = setInterval(fetchLeadsFromSheet, 60000);
+    const interval = setInterval(fetchLeadsFromSheet, 60000); // Atualiza leads a cada 1 minuto
     return () => clearInterval(interval);
   }, [fetchLeadsFromSheet]);
 
-  // REMOVIDO: Intervalo para fetchLeadsFechadosFromSheet, pois agora faz parte do fetchLeadsFromSheet
-  // useEffect(() => {
-  //   fetchLeadsFechadosFromSheet();
-  //   const interval = setInterval(fetchLeadsFechadosFromSheet, 60000);
-  //   return () => clearInterval(interval);
-  // }, [fetchLeadsFechadosFromSheet]);
-
   useEffect(() => {
     fetchUsuariosFromSheet();
-    const interval = setInterval(fetchUsuariosFromSheet, 60000);
+    const interval = setInterval(fetchUsuariosFromSheet, 60000); // Atualiza usuários a cada 1 minuto
     return () => clearInterval(interval);
   }, [fetchUsuariosFromSheet]);
 
   const adicionarUsuario = (usuario) => {
-    // Apenas adiciona localmente. O CriarUsuario DEVE chamar fetchUsuariosFromSheet após o POST.
+    // Adiciona localmente, mas o CriarUsuario DEVE chamar fetchUsuariosFromSheet após o POST
     setUsuarios((prev) => [...prev, { ...usuario, id: String(prev.length + 1) }]);
   };
 
   const adicionarLead = (lead) => {
-    // Apenas adiciona localmente. O CriarLead DEVE chamar fetchLeadsFromSheet após o POST.
+    // Adiciona localmente, mas o CriarLead DEVE chamar fetchLeadsFromSheet após o POST
     setLeads((prev) => [...prev, lead]);
   };
 
@@ -183,7 +176,7 @@ const App = () => {
     // Otimisticamente atualiza o estado local para resposta rápida da UI
     setLeads((prev) =>
       prev.map((lead) =>
-        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
+        String(lead.phone) === String(phone) ? { ...lead, status: novoStatus, confirmado: true } : lead
       )
     );
 
@@ -214,8 +207,7 @@ const App = () => {
     } catch (error) {
       console.error('Erro ao enviar atualização de status do lead:', error);
       alert('Erro de rede ao atualizar status do lead. Por favor, tente novamente.');
-      // Se houve um erro de rede (não CORS), ainda precisamos re-buscar
-      fetchLeadsFromSheet();
+      fetchLeadsFromSheet(); // Reverte o estado visual em caso de erro de rede
     }
   };
 
@@ -237,10 +229,15 @@ const App = () => {
           ? {
               ...l,
               Seguradora: seguradora,
-              PremioLiquido: premioLiquido, // O valor já vem tratado em LeadsFechados
-              Comissao: comissao, // O valor já vem tratado em LeadsFechados
-              Parcelamento: parcelamento, // O valor já vem tratado em LeadsFechados
+              PremioLiquido: premioLiquido,
+              Comissao: comissao,
+              Parcelamento: parcelamento,
               insurerConfirmed: true, // Se aplicável
+              // Também atualiza as chaves originais que podem estar sendo usadas
+              insurer: seguradora,
+              premioliquido: premioLiquido,
+              comissao: comissao,
+              parcelamento: parcelamento,
             }
           : l
       )
@@ -250,7 +247,7 @@ const App = () => {
       const payload = {
         action: 'alterar_seguradora',
         lead: {
-          ID: String(id), // ID do lead
+          ID: String(id), // ID do lead para o Apps Script
           Seguradora: seguradora,
           PremioLiquido: premioLiquido,
           Comissao: comissao,
@@ -499,16 +496,17 @@ const App = () => {
             element={
               <PrivateRoute>
                 <Dashboard
-                  // Leads fechados agora são filtrados do estado 'leads' principal
+                  // Filtrando leads fechados para o Dashboard
                   leadsClosed={
                     isAdmin
                       ? leads.filter(lead => lead.status === 'Fechado')
-                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
+                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
                   }
+                  // Passando todos os leads para o Dashboard para que ele possa fazer suas próprias contagens
                   leads={
                     isAdmin
                       ? leads
-                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())
+                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())
                   }
                   usuarioLogado={usuarioLogado}
                 />
@@ -520,7 +518,7 @@ const App = () => {
             element={
               <PrivateRoute>
                 <Leads
-                  leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
+                  leads={isAdmin ? leads : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
                   usuarios={usuarios}
                   onUpdateStatus={atualizarStatusLead}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
@@ -535,16 +533,15 @@ const App = () => {
             element={
               <PrivateRoute>
                 <LeadsFechados
-                  // Leads fechados agora são filtrados do estado 'leads' principal
+                  // Filtrando apenas leads com status 'Fechado' para este componente
                   leads={
                     isAdmin
                       ? leads.filter(lead => lead.status === 'Fechado')
-                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
+                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Fechado')
                   }
                   usuarios={usuarios}
-                  // onUpdateInsurer e onUpdateDetalhes removidos, pois a lógica está em onConfirmInsurer
                   onConfirmInsurer={confirmarSeguradoraLead}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
                   isAdmin={isAdmin}
                   onAbrirLead={onAbrirLead}
                   leadSelecionado={leadSelecionado}
@@ -557,11 +554,11 @@ const App = () => {
             element={
               <PrivateRoute>
                 <LeadsPerdidos
-                  // Leads perdidos agora são filtrados do estado 'leads' principal
+                  // Filtrando apenas leads com status 'Perdido' para este componente
                   leads={
                     isAdmin
                       ? leads.filter(lead => lead.status === 'Perdido')
-                      : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Perdido')
+                      : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim() && lead.status === 'Perdido')
                   }
                   usuarios={usuarios}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
@@ -579,7 +576,7 @@ const App = () => {
                 <BuscarLead
                   leads={leads}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
                 />
               </PrivateRoute>
             }
@@ -598,10 +595,10 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Usuarios
-                      leads={isAdmin ? leads : leads.filter((lead) => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
+                      leads={isAdmin ? leads : leads.filter(lead => String(lead.responsavel).trim() === String(usuarioLogado.nome).trim())}
                       usuarios={usuarios}
                       fetchLeadsFromSheet={fetchLeadsFromSheet}
-                      fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
+                      fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
                       atualizarStatusUsuario={atualizarStatusUsuario}
                     />
                   </PrivateRoute>
@@ -616,7 +613,7 @@ const App = () => {
                 <Ranking
                   usuarios={usuarios}
                   fetchLeadsFromSheet={fetchLeadsFromSheet}
-                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Mantém o nome da prop, mas chama fetchLeadsFromSheet
+                  fetchLeadsFechadosFromSheet={fetchLeadsFromSheet} // Chama a função que busca todos os leads
                   leads={leads}
                 />
               </PrivateRoute>
