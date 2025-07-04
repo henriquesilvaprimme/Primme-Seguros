@@ -48,7 +48,7 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
       premioLiquido: '',
       comissao: '',
       parcelamento: '',
-      createdAt: now.toISOString(), // AGORA: Data de criação baseada no dia e horário atuais
+      createdAt: now.toISOString(), // Data de criação baseada no dia e horário atuais
       responsavel: '', // Definido como string vazia para ser criado em branco na planilha
       editado: '' // Definido como string vazia para ser criado em branco na planilha
     };
@@ -179,7 +179,7 @@ const CriarLead = ({ adicionarLead, usuarioLogado }) => { // Adicionado usuarioL
           <option value="">Selecione o Tipo de Seguro</option>
           <option value="Novo">Novo</option>
           <option value="Renovacao">Renovação</option>
-          <option value="Indicacão">Indicação</option>
+          <option value="Indicacao">Indicação</option>
         </select>
       </div>
 
