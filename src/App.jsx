@@ -325,9 +325,7 @@ const App = () => {
   };
 
   // Função para transferir um lead para outro responsável
-  const transferirLead = async (leadId, responsavelId) => { // Tornar a função assíncrona
-    let newResponsavelName = '';
-
+  const transferirLead = (leadId, responsavelId) => {
     if (responsavelId === null) {
       // Se for null, desatribui o responsável
       setLeads((prev) =>
@@ -335,42 +333,22 @@ const App = () => {
           lead.id === leadId ? { ...lead, responsavel: null } : lead
         )
       );
-      newResponsavelName = ''; // Define como vazio para enviar ao GAS
-    } else {
-      // Busca o usuário normalmente se responsavelId não for null
-      let usuario = usuarios.find((u) => u.id === responsavelId);
-
-      if (!usuario) {
-        console.warn("Usuário não encontrado para transferência de lead.");
-        return;
-      }
-      newResponsavelName = usuario.nome;
-
-      setLeads((prev) =>
-        prev.map((lead) =>
-          lead.id === leadId ? { ...lead, responsavel: newResponsavelName } : lead
-        )
-      );
+      return;
     }
 
-    // Enviar a atualização para o Google Apps Script
-    try {
-      // Usando GOOGLE_SHEETS_USERS como base para a URL do script
-      await fetch(GOOGLE_SHEETS_USERS + '?v=transferir_lead', {
-        method: 'POST',
-        mode: 'no-cors', // Importante para evitar problemas de CORS
-        body: JSON.stringify({
-          id: leadId, // O GAS espera 'id' e 'responsavel'
-          responsavel: newResponsavelName
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      console.log('Requisição de transferência de lead enviada para o GAS.');
-    } catch (error) {
-      console.error('Erro ao enviar transferência de lead para o GAS:', error);
+    // Busca o usuário normalmente se responsavelId não for null
+    let usuario = usuarios.find((u) => u.id === responsavelId);
+
+    if (!usuario) {
+      console.warn("Usuário não encontrado para transferência de lead.");
+      return;
     }
+
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === leadId ? { ...lead, responsavel: usuario.nome } : lead
+      )
+    );
   };
 
   // Função para atualizar o status ou tipo de um usuário
