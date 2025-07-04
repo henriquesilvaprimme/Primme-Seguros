@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 // import { useNavigate } from 'react-router-dom'; // Remova se não for redirecionar após criar o lead
-import './CriarLead.css'; // Opcional: para estilos, crie este arquivo se quiser
 
 const CriarLead = () => {
   // AQUI ESTÁ A NOVA URL DO SEU APP WEB GOOGLE APPS SCRIPT
