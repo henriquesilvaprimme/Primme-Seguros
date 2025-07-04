@@ -53,15 +53,17 @@ const App = () => {
 
       console.log("Dados de Leads Recebidos:", data);
 
-      if (Array.isArray(data)) {
-        const sortedData = data.sort((a, b) => {
+      // CORREÇÃO AQUI: Verifica 'data.success' e 'data.data'
+      if (data.success && Array.isArray(data.data)) {
+        const rawLeads = data.data; // Acessa o array dentro da propriedade 'data'
+        const sortedData = rawLeads.sort((a, b) => {
           const dateA = new Date(a.editado || a.data);
           const dateB = new Date(b.editado || b.data);
           return dateB - dateA; // decrescente (mais recente no topo)
         });
 
         const formattedLeads = sortedData.map((item, index) => ({
-          id: item.id ? Number(item.id) : index + 1,
+          id: item.id ? String(item.id) : String(index + 1), // Garante que o ID é string
           name: item.name || item.Name || '',
           vehicleModel: item.vehiclemodel || item.vehicleModel || '',
           vehicleYearModel: item.vehicleyearmodel || item.vehicleYearModel || '',
@@ -72,9 +74,9 @@ const App = () => {
           confirmado: item.confirmado === 'true' || item.confirmado === true,
           insurer: item.insurer || '',
           insurerConfirmed: item.insurerconfirmed === 'true' || item.insurerconfirmed === true,
-          usuarioId: item.usuarioid ? Number(item.usuarioid) : null,
-          premioLiquido: item.premioliquido || '',
-          comissao: item.comissao || '',
+          usuarioId: item.usuarioid ? String(item.usuarioid) : '', // Garante que usuarioId é string
+          premioLiquido: Number(item.premioliquido) || 0, // Converte para número
+          comissao: Number(item.comissao) || 0, // Converte para número
           parcelamento: item.parcelamento || '',
           createdAt: item.data || new Date().toISOString(),
           responsavel: item.responsavel || '',
@@ -87,6 +89,8 @@ const App = () => {
           setLeads(formattedLeads);
         }
       } else {
+        // Se a API não retornar sucesso ou os dados não forem um array, limpa os leads
+        console.warn("API de Leads retornou sucesso: false ou dados não são um array esperado:", data);
         if (!leadSelecionado) {
           setLeads([]);
         }
@@ -116,7 +120,14 @@ const App = () => {
       const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS); // Usa sua URL original
       const data = await response.json();
       console.log("Leads Fechados Recebidos:", data);
-      setLeadsFechados(data);
+
+      // CORREÇÃO AQUI: Verifica 'data.success' e 'data.data' e define o estado com 'data.data'
+      if (data.success && Array.isArray(data.data)) {
+        setLeadsFechados(data.data); // Define o estado com o array de leads fechados
+      } else {
+        console.warn("API de Leads Fechados retornou sucesso: false ou dados não são um array esperado:", data);
+        setLeadsFechados([]); // Define como array vazio em caso de erro ou formato inesperado
+      }
     } catch (error) {
       console.error('Erro ao buscar leads fechados:', error);
       setLeadsFechados([]);
@@ -286,7 +297,7 @@ const App = () => {
               Seguradora: leadParaAdicionar.Seguradora || "",
               PremioLiquido: leadParaAdicionar.premioLiquido || "",
               Comissao: leadParaAdicionar.comissao || "",
-              CParcelamento: leadParaAdicionar.parcelamento || "",
+              Parcelamento: leadParaAdicionar.parcelamento || "", // Corrigido de CParcelamento para Parcelamento
               id: leadParaAdicionar.id || null,
               usuario: leadParaAdicionar.usuario || "",
               nome: leadParaAdicionar.nome || "",
