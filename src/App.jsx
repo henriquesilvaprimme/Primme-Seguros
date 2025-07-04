@@ -13,7 +13,7 @@ import Ranking from './pages/Ranking';
 import CriarLead from './pages/CriarLead'; // Importa o novo componente CriarLead
 
 // URLs para o Google Apps Script (AJUSTADAS PARA A URL FORNECIDA)
-const GOOGLE_SHEETS_BASE_URL = 'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec';
+const GOOGLE_SHEETS_BASE_URL = 'https://script.google.com/macros/s/AKfycbwDRDM53Ofa4o5n7OdR_Qg3283039x0Sptvjg741Hk7v0DXf8oji4aBpGji-qWHMgcorw/exec';
 const GOOGLE_SHEETS_SCRIPT_URL = `${GOOGLE_SHEETS_BASE_URL}?v=getLeads`;
 const GOOGLE_SHEETS_USERS = GOOGLE_SHEETS_BASE_URL; // Base URL para ações de usuário e salvamento de leads
 const GOOGLE_SHEETS_LEADS_FECHADOS = `${GOOGLE_SHEETS_BASE_URL}?v=pegar_clientes_fechados`;
