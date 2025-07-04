@@ -10,7 +10,7 @@ const Dashboard = ({ leads }) => {
   const buscarLeads = async () => {
     try {
       const response = await axios.get(
-        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec'
+        'https://script.google.com/macros/s/AKfycbzJ_WHn3ssPL8VYbVbVOUa1Zw0xVFLolCnL-rOQ63cHO2st7KHqzZ9CHUwZhiCqVgBu/exec?v=pegar_clientes_fechados'
       );
       setLeads(response.data);
     } catch (error) {
