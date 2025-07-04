@@ -54,7 +54,7 @@ const App = () => {
           return dateB - dateA;
         });
 
-        const formattedLeads = sortedData.map((item, index) => ({
+        const formattedLeads = sortedData.map((item) => ({ // Removido index, não é usado
           id: String(item.id || ''),
           name: item.name || '',
           vehicleModel: item.vehicleModel || '',
@@ -108,6 +108,8 @@ const App = () => {
       const response = await fetch(GOOGLE_SHEETS_LEADS_FECHADOS);
       const data = await response.json();
       console.log("Leads Fechados Recebidos:", data);
+      
+      // GARANTIA FORTE: Se data.data não for um array, defina leadsFechados como array vazio.
       if (Array.isArray(data.data)) {
          setLeadsFechados(data.data);
       } else {
@@ -140,8 +142,9 @@ const App = () => {
         const data = await response.json();
         console.log("Usuários Recebidos:", data);
 
+        // GARANTIA FORTE: Se data.data não for um array, defina usuarios como array vazio.
         if (Array.isArray(data.data)) {
-          const formattedUsuarios = data.data.map((item, index) => ({
+          const formattedUsuarios = data.data.map((item) => ({ // Removido index, não é usado
             id: String(item.id || ''),
             usuario: item.usuario || '',
             nome: item.nome || '',
@@ -174,31 +177,29 @@ const App = () => {
   const [ultimoFechadoId, setUltimoFechadoId] = useState(null);
 
   const adicionarUsuario = (usuario) => {
-    setUsuarios((prev) => [...prev, { ...usuario, id: prev.length + 1 }]);
+    setUsuarios((prev) => [...(Array.isArray(prev) ? prev : []), { ...usuario, id: (Array.isArray(prev) ? prev.length : 0) + 1 }]);
   };
 
   const adicionarLead = (lead) => {
-    setLeads((prev) => [...prev, lead]);
+    setLeads((prev) => [...(Array.isArray(prev) ? prev : []), lead]);
   };
 
 
   const atualizarStatusLeadAntigo = (id, novoStatus, phone) => {
     if (novoStatus === 'Fechado') {
       setLeadsFechados((prev) => {
-        // Garantindo que prev é um array antes de mapear
         const currentLeadsFechados = Array.isArray(prev) ? prev : [];
-        const atualizados = currentLeadsFechados.map((leadsFechados) =>
-          leadsFechados.phone === phone ? { ...leadsFechados, Status: novoStatus, confirmado: true } : leadsFechados
+        const atualizados = currentLeadsFechados.map((lead) =>
+          (lead && typeof lead.phone === 'string' && lead.phone === phone) ? { ...lead, Status: novoStatus, confirmado: true } : lead
         );
         return atualizados;
       });
     }
 
     setLeads((prev) => {
-      // Garantindo que prev é um array antes de mapear
       const currentLeads = Array.isArray(prev) ? prev : [];
       return currentLeads.map((lead) =>
-        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
+        (lead && typeof lead.phone === 'string' && lead.phone === phone) ? { ...lead, status: novoStatus, confirmado: true } : lead
       );
     });
   };
@@ -207,12 +208,11 @@ const App = () => {
     setLeads((prev) => {
       const currentLeads = Array.isArray(prev) ? prev : [];
       return currentLeads.map((lead) =>
-        lead.phone === phone ? { ...lead, status: novoStatus, confirmado: true } : lead
+        (lead && typeof lead.phone === 'string' && lead.phone === phone) ? { ...lead, status: novoStatus, confirmado: true } : lead
       );
     });
 
-    // Garante que leads é um array antes de usar .find
-    let leadParaAtualizar = Array.isArray(leads) ? leads.find((lead) => lead.phone === phone) : null;
+    let leadParaAtualizar = Array.isArray(leads) ? leads.find((lead) => (lead && typeof lead.phone === 'string' && lead.phone === phone)) : null;
 
     if (!leadParaAtualizar) {
       console.warn("Lead não encontrado para atualização de status.");
@@ -220,23 +220,23 @@ const App = () => {
     }
 
     const updatedLeadData = {
-      id: String(leadParaAtualizar.id),
-      name: leadParaAtualizar.name,
-      vehicleModel: leadParaAtualizar.vehicleModel,
-      vehicleYearModel: leadParaAtualizar.vehicleYearModel,
-      city: leadParaAtualizar.city,
-      phone: leadParaAtualizar.phone,
-      insuranceType: leadParaAtualizar.insuranceType,
+      id: String(leadParaAtualizar.id || ''),
+      name: leadParaAtualizar.name || '',
+      vehicleModel: leadParaAtualizar.vehicleModel || '',
+      vehicleYearModel: leadParaAtualizar.vehicleYearModel || '',
+      city: leadParaAtualizar.city || '',
+      phone: leadParaAtualizar.phone || '',
+      insuranceType: leadParaAtualizar.insuranceType || '',
       status: novoStatus,
       confirmado: true,
-      insurer: leadParaAtualizar.insurer,
-      insurerConfirmed: leadParaAtualizer.insurerConfirmed === 'true' || leadParaAtualizar.insurerConfirmed === true,
+      insurer: leadParaAtualizar.insurer || '',
+      insurerConfirmed: leadParaAtualizar.insurerConfirmed === 'true' || leadParaAtualizar.insurerConfirmed === true,
       usuarioId: String(leadParaAtualizar.usuarioId || ''),
-      premioLiquido: leadParaAtualizar.premioLiquido,
-      comissao: leadParaAtualizar.comissao,
-      parcelamento: leadParaAtualizar.parcelamento,
-      data: leadParaAtualizar.createdAt,
-      responsavel: leadParaAtualizar.responsavel,
+      premioLiquido: leadParaAtualizar.premioLiquido || '',
+      comissao: leadParaAtualizar.comissao || '',
+      parcelamento: leadParaAtualizar.parcelamento || '',
+      data: leadParaAtualizar.createdAt || new Date().toISOString(),
+      responsavel: leadParaAtualizar.responsavel || '',
       editado: new Date().toISOString()
     };
 
@@ -262,23 +262,23 @@ const App = () => {
     if (novoStatus === 'Fechado') {
       setLeadsFechados((prev) => {
         const currentLeadsFechados = Array.isArray(prev) ? prev : [];
-        const jaExiste = currentLeadsFechados.some((lead) => lead.phone === phone);
+        const jaExiste = currentLeadsFechados.some((lead) => (lead && typeof lead.phone === 'string' && lead.phone === phone));
 
         if (jaExiste) {
           const atualizados = currentLeadsFechados.map((lead) =>
-            lead.phone === phone ? { ...lead, Status: novoStatus, confirmado: true } : lead
+            (lead && typeof lead.phone === 'string' && lead.phone === phone) ? { ...lead, Status: novoStatus, confirmado: true } : lead
           );
           return atualizados;
         } else {
-          const leadParaAdicionar = Array.isArray(leads) ? leads.find((lead) => lead.phone === phone) : null; // Garante que leads é array
+          const leadParaAdicionar = Array.isArray(leads) ? leads.find((lead) => (lead && typeof lead.phone === 'string' && lead.phone === phone)) : null;
           if (leadParaAdicionar) {
             const novoLeadFechado = {
               ID: leadParaAdicionar.id || crypto.randomUUID(),
-              name: leadParaAdicionar.name,
-              vehicleModel: leadParaAdicionar.vehicleModel,
-              vehicleYearModel: leadParaAdicionar.vehicleYearModel,
-              city: leadParaAdicionar.city,
-              phone: leadParaAdicionar.phone,
+              name: leadParaAdicionar.name || '',
+              vehicleModel: leadParaAdicionar.vehicleModel || '',
+              vehicleYearModel: leadParaAdicionar.vehicleYearModel || '',
+              city: leadParaAdicionar.city || '',
+              phone: leadParaAdicionar.phone || '',
               insurer: leadParaAdicionar.insuranceType || "",
               Data: leadParaAdicionar.createdAt || new Date().toISOString(),
               Responsavel: leadParaAdicionar.responsavel || "",
@@ -287,7 +287,7 @@ const App = () => {
               PremioLiquido: leadParaAdicionar.premioLiquido || "",
               Comissao: leadParaAdicionar.comissao || "",
               Parcelamento: leadParaAdicionar.parcelamento || "",
-              id: leadParaAdicionar.id || null,
+              id: leadParaAdicionar.id || null, // Usar o ID do lead original se existir
               usuario: leadParaAdicionar.usuario || "",
               nome: leadParaAdicionar.nome || "",
               email: leadParaAdicionar.email || "",
@@ -311,7 +311,7 @@ const App = () => {
     setLeads((prev) => {
       const currentLeads = Array.isArray(prev) ? prev : [];
       return currentLeads.map((lead) =>
-        lead.id === id
+        (lead && lead.id === id)
           ? limparCamposLead({ ...lead, insurer: seguradora })
           : lead
       );
@@ -326,40 +326,41 @@ const App = () => {
   });
 
   const confirmarSeguradoraLead = async (id, premio, seguradora, comissao, parcelamento) => {
-    const lead = Array.isArray(leadsFechados) ? leadsFechados.find((lead) => lead.ID === id) : null; // Garante que leadsFechados é array
+    const lead = Array.isArray(leadsFechados) ? leadsFechados.find((lead) => (lead && lead.ID === id)) : null;
 
     if (!lead) {
       console.error("Lead fechado não encontrado para confirmação de seguradora.");
       return;
     }
 
-    lead.Seguradora = seguradora;
-    lead.PremioLiquido = premio;
-    lead.Comissao = comissao;
-    lead.Parcelamento = parcelamento;
+    // Certificando-se que as propriedades existem antes de atribuir
+    lead.Seguradora = seguradora || '';
+    lead.PremioLiquido = premio || '';
+    lead.Comissao = comissao || '';
+    lead.Parcelamento = parcelamento || '';
     lead.insurerConfirmed = true;
 
     setLeadsFechados((prev) => {
       const currentLeadsFechados = Array.isArray(prev) ? prev : [];
       const atualizados = currentLeadsFechados.map((l) =>
-        l.ID === id ? { ...lead } : l
+        (l && l.ID === id) ? { ...lead } : l
       );
       return atualizados;
     });
 
     const updatedLeadDataForGAS = {
-      id: String(lead.ID),
-      insurer: seguradora,
-      premioLiquido: premio,
-      comissao: comissao,
-      parcelamento: parcelamento,
+      id: String(lead.ID || ''),
+      insurer: seguradora || '',
+      premioLiquido: premio || '',
+      comissao: comissao || '',
+      parcelamento: parcelamento || '',
       insurerConfirmed: true,
-      status: lead.Status,
-      name: lead.name,
-      phone: lead.phone,
-      vehicleModel: lead.vehicleModel,
-      city: lead.city,
-      responsavel: lead.Responsavel,
+      status: lead.Status || '',
+      name: lead.name || '',
+      phone: lead.phone || '',
+      vehicleModel: lead.vehicleModel || '',
+      city: lead.city || '',
+      responsavel: lead.Responsavel || '',
       editado: new Date().toISOString()
     };
 
@@ -384,7 +385,7 @@ const App = () => {
     setLeads((prev) => {
       const currentLeads = Array.isArray(prev) ? prev : [];
       return currentLeads.map((lead) =>
-        lead.id === id ? { ...lead, [campo]: valor } : lead
+        (lead && lead.id === id) ? { ...lead, [campo]: valor } : lead
       );
     });
   };
@@ -392,8 +393,7 @@ const App = () => {
   const transferirLead = async (leadId, responsavelId) => {
     let responsavelNome = null;
     if (responsavelId !== null) {
-      // Garante que usuarios é um array antes de usar .find
-      let usuario = Array.isArray(usuarios) ? usuarios.find((u) => u.id == responsavelId) : null; 
+      let usuario = Array.isArray(usuarios) ? usuarios.find((u) => (u && u.id == responsavelId)) : null; 
       if (!usuario) {
         console.warn("Usuário responsável não encontrado para ID:", responsavelId);
         return;
@@ -404,18 +404,18 @@ const App = () => {
     setLeads((prev) => {
       const currentLeads = Array.isArray(prev) ? prev : [];
       return currentLeads.map((lead) =>
-        lead.id === leadId ? { ...lead, responsavel: responsavelNome } : lead
+        (lead && lead.id === leadId) ? { ...lead, responsavel: responsavelNome || '' } : lead
       );
     });
 
     try {
-      const leadParaTransferir = Array.isArray(leads) ? leads.find(l => l.id === leadId) : null; // Garante que leads é array
+      const leadParaTransferir = Array.isArray(leads) ? leads.find(l => (l && l.id === leadId)) : null; 
       if (!leadParaTransferir) {
         console.error("Lead não encontrado para transferência:", leadId);
         return;
       }
 
-      leadParaTransferir.responsavel = responsavelNome;
+      leadParaTransferir.responsavel = responsavelNome || '';
       leadParaTransferir.editado = new Date().toISOString();
 
       const response = await fetch(`${GOOGLE_SHEETS_BASE_URL}?action=transferir_lead`, {
@@ -436,7 +436,7 @@ const App = () => {
 
 
   const atualizarStatusUsuario = async (id, novoStatus = null, novoTipo = null) => {
-    const usuario = Array.isArray(usuarios) ? usuarios.find((usuario) => usuario.id === id) : null; // Garante que usuarios é array
+    const usuario = Array.isArray(usuarios) ? usuarios.find((usuario) => (usuario && usuario.id === id)) : null; 
     if (!usuario) return;
 
     const usuarioAtualizado = { ...usuario };
@@ -456,7 +456,7 @@ const App = () => {
       setUsuarios((prev) => {
         const currentUsuarios = Array.isArray(prev) ? prev : [];
         return currentUsuarios.map((u) =>
-          u.id === id
+          (u && u.id === id)
             ? {
               ...u,
               ...(novoStatus !== null ? { status: novoStatus } : {}),
@@ -476,15 +476,15 @@ const App = () => {
     setLeadSelecionado(lead);
 
     let path = '/leads';
-    if (lead.status === 'Fechado') path = '/leads-fechados';
-    else if (lead.status === 'Perdido') path = '/leads-perdidos';
+    if (lead && lead.status === 'Fechado') path = '/leads-fechados';
+    else if (lead && lead.status === 'Perdido') path = '/leads-perdidos';
 
     navigate(path);
   };
 
   const handleLogin = () => {
     const usuarioEncontrado = Array.isArray(usuarios) ? usuarios.find(
-      (u) => u.usuario === loginInput && u.senha === senhaInput && u.status === 'Ativo'
+      (u) => (u && typeof u.usuario === 'string' && u.usuario === loginInput && typeof u.senha === 'string' && u.senha === senhaInput && u.status === 'Ativo')
     ) : null;
 
     if (usuarioEncontrado) {
@@ -548,6 +548,32 @@ const App = () => {
   // Define isAdmin com base em usuarioLogado ser um objeto e ter a propriedade 'tipo'
   const isAdmin = usuarioLogado && usuarioLogado.tipo === 'Admin';
 
+  const filterLeadsByResponsavel = (leadsList) => {
+    // Garante que leadsList é um array antes de filtrar
+    if (!Array.isArray(leadsList)) {
+        console.warn("leadsList não é um array na função filterLeadsByResponsavel.");
+        return [];
+    }
+    // Garante que usuarioLogado existe e que usuarioLogado.nome é uma string
+    if (usuarioLogado && typeof usuarioLogado.nome === 'string') {
+      return leadsList.filter((lead) => (lead && typeof lead.responsavel === 'string' && lead.responsavel === usuarioLogado.nome));
+    }
+    return [];
+  };
+
+  const filterLeadsFechadosByResponsavel = (leadsFechadosList) => {
+    // Garante que leadsFechadosList é um array antes de filtrar
+    if (!Array.isArray(leadsFechadosList)) {
+        console.warn("leadsFechadosList não é um array na função filterLeadsFechadosByResponsavel.");
+        return [];
+    }
+    // Garante que usuarioLogado existe e que usuarioLogado.nome é uma string
+    if (usuarioLogado && typeof usuarioLogado.nome === 'string') {
+      return leadsFechadosList.filter((lead) => (lead && typeof lead.Responsavel === 'string' && lead.Responsavel === usuarioLogado.nome));
+    }
+    return [];
+  };
+
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       <Sidebar isAdmin={isAdmin} nomeUsuario={usuarioLogado} />
@@ -559,22 +585,8 @@ const App = () => {
             path="/dashboard"
             element={
               <Dashboard
-                leadsClosed={
-                  isAdmin && Array.isArray(leadsFechados) // Se for admin e leadsFechados for array, usa.
-                    ? leadsFechados
-                    : (Array.isArray(leadsFechados) && usuarioLogado // Se não for admin, mas leadsFechados for array E usuarioLogado existir
-                        ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
-                        : [] // Caso contrário, array vazio
-                      )
-                }
-                leads={
-                  isAdmin && Array.isArray(leads) // Se for admin e leads for array, usa.
-                    ? leads
-                    : (Array.isArray(leads) && usuarioLogado // Se não for admin, mas leads for array E usuarioLogado existir
-                        ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
-                        : [] // Caso contrário, array vazio
-                      )
-                }
+                leadsClosed={isAdmin ? leadsFechados : filterLeadsFechadosByResponsavel(leadsFechados)}
+                leads={isAdmin ? leads : filterLeadsByResponsavel(leads)}
                 usuarioLogado={usuarioLogado}
               />
             }
@@ -583,14 +595,7 @@ const App = () => {
             path="/leads"
             element={
               <Leads
-                leads={
-                  isAdmin && Array.isArray(leads)
-                    ? leads
-                    : (Array.isArray(leads) && usuarioLogado
-                        ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
-                        : []
-                      )
-                }
+                leads={isAdmin ? leads : filterLeadsByResponsavel(leads)}
                 usuarios={Array.isArray(usuarios) ? usuarios : []}
                 onUpdateStatus={atualizarStatusLead}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
@@ -603,14 +608,7 @@ const App = () => {
             path="/leads-fechados"
             element={
               <LeadsFechados
-                leads={
-                  isAdmin && Array.isArray(leadsFechados)
-                    ? leadsFechados
-                    : (Array.isArray(leadsFechados) && usuarioLogado
-                        ? leadsFechados.filter((lead) => lead.Responsavel === usuarioLogado.nome)
-                        : []
-                      )
-                }
+                leads={isAdmin ? leadsFechados : filterLeadsFechadosByResponsavel(leadsFechados)}
                 usuarios={Array.isArray(usuarios) ? usuarios : []}
                 onUpdateInsurer={atualizarSeguradoraLead}
                 onConfirmInsurer={confirmarSeguradoraLead}
@@ -627,14 +625,7 @@ const App = () => {
             path="/leads-perdidos"
             element={
               <LeadsPerdidos
-                leads={
-                  isAdmin && Array.isArray(leads)
-                    ? leads
-                    : (Array.isArray(leads) && usuarioLogado
-                        ? leads.filter((lead) => lead.responsavel === usuarioLogado.nome)
-                        : []
-                      )
-                }
+                leads={isAdmin ? leads : filterLeadsByResponsavel(leads)}
                 usuarios={Array.isArray(usuarios) ? usuarios : []}
                 fetchLeadsFromSheet={fetchLeadsFromSheet}
                 onAbrirLead={onAbrirLead}
@@ -667,7 +658,7 @@ const App = () => {
                 path="/usuarios"
                 element={
                   <Usuarios
-                    leads={isAdmin && Array.isArray(leads) ? leads : []} // Para o componente Usuarios, leads é sempre todos se for admin
+                    leads={isAdmin ? leads : []} // Para o componente Usuarios, leads é sempre todos se for admin
                     usuarios={Array.isArray(usuarios) ? usuarios : []}
                     fetchLeadsFromSheet={fetchLeadsFromSheet}
                     fetchLeadsFechadosFromSheet={fetchLeadsFechadosFromSheet}
